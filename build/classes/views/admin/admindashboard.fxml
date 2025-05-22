@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.shape.Line?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane fx:id="mainContent" prefHeight="586.0" prefWidth="930.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AdminDashboardController">
+   <children>
+      <ImageView fitHeight="97.0" fitWidth="140.0" layoutX="35.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../../images/logo2.png" />
+         </image>
+      </ImageView>
+
+      <Line endX="-17.999984741210938" layoutX="142.0" layoutY="117.0" startX="-100.0" />
+
+      <!-- Instructor Table -->
+ <TableView fx:id="instructor" layoutX="155.0" layoutY="163.0" prefHeight="198.0" prefWidth="334.0">
+    <columns>
+        <TableColumn fx:id="facultyIDCol" prefWidth="103.2" text="Faculty ID" />
+        <TableColumn fx:id="facultyNameCol" prefWidth="230.4" text="Full Name" />
+        <TableColumn fx:id="departmentCol" prefWidth="230.4" text="Department" />
+    </columns>
+</TableView>
+
+
+      <!-- Title -->
+      <Text fill="#696161" layoutX="361.0" layoutY="79.0" strokeType="OUTSIDE" strokeWidth="0.0" text="DASHBOARD" wrappingWidth="292.17">
+         <font>
+            <Font name="System Bold" size="41.0" />
+         </font>
+      </Text>
+
+      <!-- Buttons -->
+      <Button fx:id="logoutButton" layoutX="14.0" layoutY="545.0" mnemonicParsing="false" onAction="#handleLogout" prefHeight="26.0" prefWidth="129.0" text="LOG OUT">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+
+      <Button layoutX="18.0" layoutY="131.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="130.0" style="-fx-background-color: lightblue;" text="DASHBOARD">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font></Button>
+      
+      <Button fx:id="addinstructorButton" layoutX="18.0" layoutY="170.0" mnemonicParsing="false" onAction="#handleAddFaculty" prefHeight="26.0" prefWidth="130.0" text="ADD INSTRUCTOR">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+
+      <Button fx:id="addstudentButton" layoutX="19.0" layoutY="209.0" mnemonicParsing="false" onAction="#handleAddStudent" prefHeight="26.0" prefWidth="129.0" text="ADD STUDENT">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+
+      <Button fx:id="addcourseButton" layoutX="19.0" layoutY="249.0" mnemonicParsing="false" onAction="#handleAddCourse" prefHeight="26.0" prefWidth="129.0" text="ADD COURSES">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+
+      <!-- Student Table -->
+      <TableView fx:id="student" layoutX="505.0" layoutY="163.0" prefHeight="406.0" prefWidth="410.0">
+         <columns>
+            <TableColumn fx:id="studentIDCol" prefWidth="100.0" text="Student ID" />
+            <TableColumn fx:id="studentLastCol" prefWidth="150.0" text="Last Name" />
+            <TableColumn fx:id="studentFirstCol" prefWidth="150.0" text="First Name" />
+         </columns>
+      </TableView>
+
+      <!-- Course Table -->
+      <TableView fx:id="course" layoutX="155.0" layoutY="407.0" prefHeight="162.0" prefWidth="334.0">
+         <columns>
+            <TableColumn fx:id="courseNameCol" prefWidth="200.0" text="Course" />
+            <TableColumn fx:id="courseAcronymCol" prefWidth="130.0" text="Acronym" />
+         </columns>
+      </TableView>
+      <Button layoutX="155.0" layoutY="136.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="334.0" style="-fx-background-color: skyblue;" text="INSTRUCTOR">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+      <Button layoutX="155.0" layoutY="380.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="334.0" style="-fx-background-color: skyblue;" text="Button">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+      <Button layoutX="505.0" layoutY="136.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="410.0" style="-fx-background-color: skyblue;" text="STUDENT">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+   </children>
+</AnchorPane>

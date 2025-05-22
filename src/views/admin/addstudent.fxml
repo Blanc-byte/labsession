@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.shape.Line?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane id="AnchorPane" prefHeight="586.0" prefWidth="930.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AddStudentController">
+   <children>
+      <AnchorPane layoutX="156.0" layoutY="131.0" prefHeight="442.0" prefWidth="765.0" style="-fx-background-color: lightgray;">
+         <children>
+            <TextField fx:id="textFieldStudentId" layoutX="259.0" layoutY="41.0" prefHeight="26.0" prefWidth="268.0" promptText="STUDENT ID" />
+            <TextField fx:id="textFieldLastName" layoutX="259.0" layoutY="80.0" prefHeight="26.0" prefWidth="268.0" promptText="LASTNAME" />
+            <TextField fx:id="textFieldFirstName" layoutX="259.0" layoutY="119.0" prefHeight="26.0" prefWidth="268.0" promptText="FIRSTNAME" />
+            <TextField fx:id="textFieldAge" layoutX="259.0" layoutY="157.0" prefHeight="26.0" prefWidth="119.0" promptText="AGE" />
+            <TextField fx:id="textFieldGender" layoutX="407.0" layoutY="157.0" prefHeight="26.0" prefWidth="119.0" promptText="GENDER" />
+            <TextField fx:id="textFieldAddress" layoutX="259.0" layoutY="194.0" prefHeight="26.0" prefWidth="268.0" promptText="ADDRESS" />
+            <TextField fx:id="textFieldContact" layoutX="259.0" layoutY="231.0" prefHeight="26.0" prefWidth="268.0" promptText="CONTACT" />
+            <TextField fx:id="textFieldEmail" layoutX="259.0" layoutY="272.0" prefHeight="26.0" prefWidth="268.0" promptText="EMAIL" />
+            <TextField fx:id="textFieldUsername" layoutX="259.0" layoutY="316.0" prefHeight="26.0" prefWidth="268.0" promptText="USERNAME" />
+            <TextField fx:id="textFieldPassword" layoutX="259.0" layoutY="354.0" prefHeight="26.0" prefWidth="268.0" promptText="PASSWORD" />
+            <Button fx:id="buttonAdd" layoutX="328.0" layoutY="401.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="129.0" text="ADD" onAction="#handleAddStudent">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </Button>
+         </children>
+      </AnchorPane>
+      <ImageView fx:id="imageViewLogo" fitHeight="97.0" fitWidth="140.0" layoutX="35.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../../images/logo2.png" />
+         </image>
+      </ImageView>
+      <Line fx:id="lineSeparator" endX="-17.999984741210938" layoutX="142.0" layoutY="117.0" startX="-100.0" />
+      <Text fx:id="textDashboard" fill="#696161" layoutX="361.0" layoutY="79.0" strokeType="OUTSIDE" strokeWidth="0.0" text="DASHBOARD" wrappingWidth="292.17230224609375">
+         <font>
+            <Font name="System Bold" size="41.0" />
+         </font>
+      </Text>
+      <Button fx:id="buttonLogOut" layoutX="14.0" layoutY="545.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="129.0" text="LOG OUT" onAction="#handleLogOut">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+      <Button fx:id="buttonDashboard" layoutX="18.0" layoutY="131.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="130.0" text="DASHBOARD" onAction="#handleDashboard">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+      <Button fx:id="buttonAddStudent" layoutX="19.0" layoutY="209.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="129.0" style="-fx-background-color: lightblue;" text="ADD STUDENT" onAction="#handleAddStudentNavigation">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+      <Button fx:id="buttonAddInstructor" layoutX="18.0" layoutY="170.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="130.0" text="ADD INSTRUCTOR" onAction="#handleAddInstructorNavigation">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+      <Button fx:id="buttonAddCourses" layoutX="19.0" layoutY="249.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="129.0" text="ADD COURSES" onAction="#handleAddCoursesNavigation">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font>
+      </Button>
+   </children>
+</AnchorPane>

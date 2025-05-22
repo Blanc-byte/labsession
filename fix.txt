@@ -1,0 +1,10 @@
+Faculty-
+ create Session of specific instructor(ex. attendtance, task,) 
+ Duration Timer (end duration)
+ Messages for instructor
+
+Admin-
+ CRUD
+
+Students-
+ Message.
