@@ -37,11 +37,11 @@ public class studentFrameController {
     DatabaseConnection dc = new DatabaseConnection();
     public void initialize()throws Exception{
         dc.connect();
-        File read = new File("instructorID.txt");
+        File read = new File("studentID.txt");
         Scanner sc = new Scanner(read);
         while(sc.hasNextLine()){
             studentId=sc.nextLine();
-            System.out.println(studentId);
+            System.out.println("studentId: "+studentId);
         }
     }
     @FXML private TableView<viewStudentPerformance> myTaskTable;
@@ -75,6 +75,7 @@ public class studentFrameController {
                 rs.getString("task"),
                 rs.getString("score")
             ));
+            System.out.println(rs.getString("code"));
         }
 
         rs.close();
@@ -108,7 +109,7 @@ public class studentFrameController {
                 "INSERT INTO performance (student_id, task_id, file, message, file_path) VALUES (?, ?, ?, ?, ?)"
             );
 
-            insert.setString(1, "1");  // student_id
+            insert.setString(1, studentId);  // student_id
             insert.setString(2, taskID);
             insert.setBlob(3, fis);  // file content as BLOB
             insert.setString(4, message.getText());
@@ -126,6 +127,7 @@ public class studentFrameController {
                 duration.setText("");
                 filePath.setText("");
                 duration.setText("");
+                message.setText("");
                 selectedFile = null;
                 ifOnSession=false;
                 // reset UI and variables here...
@@ -178,7 +180,7 @@ public class studentFrameController {
                     description.setText(description.getText()+rs.getString("description"));
                     String rawDuration = rs.getString("duration");
                     duration.setText(duration.getText()+rawDuration); // Initial display
-
+                    
                     startCountdown(rawDuration);
 //                    showAlert(Alert.AlertType.INFORMATION, "Success", "Task code is valid and exists in the database.");
                 } else {
@@ -229,11 +231,12 @@ public class studentFrameController {
                     homePane.setVisible(true);
                     sessionPane.setVisible(false);
                     duration.setText("");
+                    message.setText("");    
                     try {
                         PreparedStatement insert = dc.con.prepareStatement(
                             "INSERT INTO performance (student_id, score, task_id, file, file_path, message) VALUES (?, NULL, ?, NULL, NULL, ?)"
                         );
-                        insert.setString(1, "1");
+                        insert.setString(1, studentId);
                         insert.setString(2, taskID);
                         insert.setString(3, message.getText());
                         insert.executeUpdate();
