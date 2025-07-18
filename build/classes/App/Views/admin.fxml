@@ -34,9 +34,10 @@
               <columns>
                 <TableColumn fx:id="facFullname" prefWidth="163.1999969482422" text="Fullname" />
                 <TableColumn fx:id="facEmail" prefWidth="176.79998779296875" text="Email" />
-                  <TableColumn fx:id="facUsername" prefWidth="129.5999755859375" text="Username" />
-                  <TableColumn fx:id="facPassword" prefWidth="144.0" text="Password" />
-                  <TableColumn fx:id="facActions" prefWidth="146.4000244140625" text="Actions" />
+                  <TableColumn fx:id="facUsername" prefWidth="63.999969482421875" text="Username" />
+                  <TableColumn fx:id="facPassword" prefWidth="65.59991455078125" text="Password" />
+                  <TableColumn fx:id="status" prefWidth="67.99993896484375" text="Status" />
+                  <TableColumn fx:id="facActions" prefWidth="224.00006103515625" text="Actions" />
               </columns>
             </TableView>
             <Button layoutX="638.0" layoutY="75.0" mnemonicParsing="false" onAction="#showAddFacultyDialog" prefHeight="25.0" prefWidth="130.0" text="ADD" />

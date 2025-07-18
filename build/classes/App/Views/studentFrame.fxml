@@ -91,5 +91,6 @@
             </TableView>
          </children>
       </Pane>
+      <Label fx:id="user" layoutX="14.0" layoutY="132.0" prefHeight="18.0" prefWidth="130.0" />
    </children>
 </AnchorPane>

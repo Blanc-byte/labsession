@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -38,20 +39,27 @@ public class sessionController {
     DatabaseConnection dc = new DatabaseConnection();
     public void initialize()throws Exception{
         dc.connect();
-        loadSubTable();
-        loadTasksToTable();
         File read = new File("instructorID.txt");
         Scanner sc = new Scanner(read);
         while(sc.hasNextLine()){
             instructorID=sc.nextLine();
             System.out.println(instructorID);
         }
+        Statement statement = dc.con.createStatement();
+        statement.executeUpdate("UPDATE `faculty` SET status= 'Active' WHERE facultyID = '"+instructorID+"'");
+        
+        loadSubTable();
+        loadTasksToTable();
     }
-     
     
+    @FXML
+    public void logOut()throws Exception{
+        Statement statement = dc.con.createStatement();
+        statement.executeUpdate("UPDATE `faculty` SET status= 'Inactive' WHERE facultyID = '"+instructorID+"'");
+    }
     
     @FXML private TableView<PerformanceView> studentPass;
-    @FXML private TableColumn<PerformanceView, String> studName, fileName, studentScore;
+    @FXML private TableColumn<PerformanceView, String> studName, fileName, studentScore,dateSubmitted;
     @FXML private TableColumn<PerformanceView, Void> message, studentActions;
 
     public void loadStudentPassesTable() throws Exception {
@@ -60,6 +68,7 @@ public class sessionController {
         studName.setCellValueFactory(cellData -> cellData.getValue().studentNameProperty());
         fileName.setCellValueFactory(cellData -> cellData.getValue().fileNameProperty());
         studentScore.setCellValueFactory(cellData -> cellData.getValue().scoreProperty());
+        dateSubmitted.setCellValueFactory(cellData -> cellData.getValue().dateSubProperty());
 
         // Setup message column with VIEW button
         message.setCellFactory(col -> new TableCell<>() {
@@ -163,11 +172,11 @@ public class sessionController {
     ObservableList<PerformanceView> performanceList = FXCollections.observableArrayList();
     public void loadPerformanceData() throws SQLException {
         performanceList.clear();
-
+        count = 0;
         String sql = """
-            SELECT p.id, CONCAT(s.firstname, ' ', s.lastname) AS studentName, p.file, p.message, p.score, p.file_path
+            SELECT p.id, CONCAT(s.firstname, ' ', s.lastname) AS studentName, p.file, p.message, p.score, p.file_path, p.date_sub
             FROM performance p
-            JOIN student s ON p.student_id = s.studentID WHERE p.task_id='"""+taskId+"'";
+            JOIN student s ON p.student_id = s.studentID WHERE p.task_id='"""+taskId+"' ORDER BY p.date_sub desc";
 
         PreparedStatement ps = dc.con.prepareStatement(sql);
         ResultSet rs = ps.executeQuery();
@@ -179,18 +188,19 @@ public class sessionController {
                 rs.getString("file"),
                 rs.getString("message"),
                 rs.getString("score"),
-                rs.getString("file_path")
+                rs.getString("file_path"),
+                rs.getString("date_sub")
             ));
             count++;
         }
-        totalPass.setText(totalPass.getText()+ count);
+        totalPass.setText(""+count);
 
         rs.close();
         ps.close();
     }
     
     @FXML private TableView<TaskSubjectView> taskTable;
-    @FXML private TableColumn<TaskSubjectView, String> task, taskDesc, subCodeCol, subDesc, dur;
+    @FXML private TableColumn<TaskSubjectView, String> task, taskDesc, subCodeCol, subDesc, dur, dateSub;
     @FXML private TableColumn<TaskSubjectView, Void> taskActions;
     public void loadTasksToTable()throws Exception{
         task.setCellValueFactory(data -> data.getValue().taskProperty());
@@ -198,6 +208,7 @@ public class sessionController {
         subCodeCol.setCellValueFactory(data -> data.getValue().subjectCodeProperty());
         subDesc.setCellValueFactory(data -> data.getValue().subjectDescriptionProperty());
         dur.setCellValueFactory(data -> data.getValue().durationProperty());
+        dateSub.setCellValueFactory(cellData -> cellData.getValue().dateSubProperty());
         taskSubjectList.clear();
         loadTaskSubjectData();
         taskTable.setItems(taskSubjectList);
@@ -272,10 +283,11 @@ public class sessionController {
                 s.code AS subject_code, 
                 s.description AS subject_description, 
                 t.duration,
-                t.status
+                t.status,
+                t.date_sub
             FROM tasks t
             JOIN subject s ON t.subject_id = s.id
-            WHERE t.instructor_id = '"""+instructorID+"'";
+            WHERE t.instructor_id = '"""+instructorID+"' ORDER BY t.date_sub desc";
 
         PreparedStatement ps = dc.con.prepareStatement(sql);
         ResultSet rs = ps.executeQuery();
@@ -288,7 +300,8 @@ public class sessionController {
                 rs.getString("subject_code"),
                 rs.getString("subject_description"),
                 rs.getString("duration"),
-                rs.getString("status")
+                rs.getString("status"),
+                rs.getString("date_sub")
             ));
         }
 
@@ -298,7 +311,7 @@ public class sessionController {
 
 
     @FXML private TableView<subject> subjectTable;
-    @FXML private TableColumn<subject, String> subCode, subName;
+    @FXML private TableColumn<subject, String> subCode, subName, subSem, subYear;
     @FXML private TableColumn<subject, Void> createSession, manageSubject;
     ObservableList<subject> subjects = FXCollections.observableArrayList();
     public void loadSubTable() throws Exception {
@@ -307,6 +320,8 @@ public class sessionController {
 
         subCode.setCellValueFactory(cellData -> cellData.getValue().codeProperty());
         subName.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
+        subSem.setCellValueFactory(cellData -> cellData.getValue().semProperty());
+        subYear.setCellValueFactory(cellData -> cellData.getValue().yearProperty());
         subjectTable.setItems(subjects);
 
         // Create button (no action)
@@ -327,7 +342,21 @@ public class sessionController {
                     TextField taskCode = new TextField();
                     TextArea description = new TextArea();
                     description.setWrapText(true);
-                    
+
+                    // ✅ NEW: Semester ComboBox
+                    ComboBox<String> semCombo = new ComboBox<>();
+                    semCombo.getItems().addAll("1", "2");
+                    semCombo.setValue("1");
+
+                    // ✅ NEW: School Year ComboBox
+                    ComboBox<String> schoolYearCombo = new ComboBox<>();
+                    int currentYear = LocalDate.now().getYear();
+                    for (int i = -1; i <= 3; i++) {
+                        int start = currentYear + i;
+                        schoolYearCombo.getItems().add(start + "-" + (start + 1));
+                    }
+                    schoolYearCombo.setValue(currentYear + "-" + (currentYear + 1));
+
                     // Layout
                     GridPane grid = new GridPane();
                     grid.setHgap(10);
@@ -336,8 +365,10 @@ public class sessionController {
                     grid.addRow(1, new Label("Description:"), description);
                     grid.addRow(2, new Label("Duration:"), durationField);
                     grid.addRow(3, new Label("CODE:"), taskCode);
-                    dialog.getDialogPane().setContent(grid);
+                    grid.addRow(4, new Label("Semester:"), semCombo);
+                    grid.addRow(5, new Label("School Year:"), schoolYearCombo);
 
+                    dialog.getDialogPane().setContent(grid);
                     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
                     Optional<ButtonType> result = dialog.showAndWait();
 
@@ -346,36 +377,49 @@ public class sessionController {
                         String duration = durationField.getText().trim();
                         String task_code = taskCode.getText().trim();
                         String descriptions = description.getText().trim();
+                        String sem = semCombo.getValue();
+                        String schoolYear = schoolYearCombo.getValue();
 
-                        if (!task.isEmpty() && !duration.isEmpty()) {
-                            try {
-                                PreparedStatement ps = dc.con.prepareStatement(
-                                    "INSERT INTO tasks (task, status, subject_id, duration, instructor_id, task_code, description) VALUES (?, 'Pending', ?, ?, ?, ?, ?)"
-                                );
-                                ps.setString(1, task);
-                                ps.setString(2, selected.getId());
-                                ps.setString(3, duration);
-                                ps.setString(4, instructorID);
-                                ps.setString(5, task_code);
-                                ps.setString(6, descriptions);
+                        if (task.isEmpty() || duration.isEmpty() || sem == null || schoolYear == null) {
+                            showAlert("Task, Duration, Semester, and School Year are required!");
+                            return;
+                        }
 
-                                int rows = ps.executeUpdate();
-                                if (rows > 0) {
-                                    Alert success = new Alert(Alert.AlertType.INFORMATION);
-                                    success.setTitle("Success");
-                                    success.setHeaderText("Session created successfully!");
-                                    success.showAndWait();
-                                }
+                        if (!isValidDuration(duration)) {
+                            showAlert("Invalid duration! Use whole hours (e.g., 1, 2) or H:MM (e.g., 1:30). Max 24 hours.");
+                            return;
+                        }
 
-                                ps.close();
-                            } catch (SQLException e) {
-                                e.printStackTrace();
-                                Alert error = new Alert(Alert.AlertType.ERROR);
-                                error.setTitle("Error");
-                                error.setHeaderText("Failed to create session.");
-                                error.setContentText(e.getMessage());
-                                error.showAndWait();
+                        try {
+                            PreparedStatement ps = dc.con.prepareStatement(
+                                "INSERT INTO tasks (task, status, subject_id, duration, instructor_id, task_code, description, sem, school_year) " +
+                                "VALUES (?, 'Pending', ?, ?, ?, ?, ?, ?, ?)"
+                            );
+                            ps.setString(1, task);
+                            ps.setString(2, selected.getId());
+                            ps.setString(3, duration);
+                            ps.setString(4, instructorID);
+                            ps.setString(5, task_code);
+                            ps.setString(6, descriptions);
+                            ps.setString(7, sem);
+                            ps.setString(8, schoolYear);
+
+                            int rows = ps.executeUpdate();
+                            if (rows > 0) {
+                                Alert success = new Alert(Alert.AlertType.INFORMATION);
+                                success.setTitle("Success");
+                                success.setHeaderText("Session created successfully!");
+                                success.showAndWait();
                             }
+
+                            ps.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                            Alert error = new Alert(Alert.AlertType.ERROR);
+                            error.setTitle("Error");
+                            error.setHeaderText("Failed to create session.");
+                            error.setContentText(e.getMessage());
+                            error.showAndWait();
                         }
                     }
                 });
@@ -387,6 +431,7 @@ public class sessionController {
                 setGraphic(empty ? null : createBtn);
             }
         });
+
 
 
         // Manage buttons: Update and Delete
@@ -461,6 +506,33 @@ public class sessionController {
             }
         });
     }
+    
+    // ✅ Helper to show warnings
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING, message);
+        alert.showAndWait();
+    }
+
+    // ✅ Validate duration input: whole number (1-24) or H:MM format (0-24 hours)
+    private boolean isValidDuration(String input) {
+        input = input.trim();
+        if (input.matches("^\\d+$")) {
+            // Whole number
+            int hours = Integer.parseInt(input);
+            return hours >= 1 && hours <= 24;
+        } else if (input.matches("^\\d{1,2}:\\d{2}$")) {
+            String[] parts = input.split(":");
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+
+            if (minutes < 0 || minutes >= 60) return false;
+
+            double totalHours = hours + (minutes / 60.0);
+            return totalHours > 0 && totalHours <= 24;
+        } else {
+            return false;
+        }
+    }
 
     public void getSubjects()throws Exception{
         Statement statement = dc.con.createStatement();
@@ -469,12 +541,14 @@ public class sessionController {
             String a = resultSet.getString("id");
             String b = resultSet.getString("code");
             String c = resultSet.getString("description");
-            subjects.add(new subject(a,b, c));
+            String d = resultSet.getString("sem");
+            String r = resultSet.getString("year");
+            subjects.add(new subject(a,b,c,d,r));
         }
     }
     
     public void addSubject() {
-        
+        // Code input
         TextInputDialog codeDialog = new TextInputDialog();
         codeDialog.setTitle("Add Subject");
         codeDialog.setHeaderText("Enter Subject Code");
@@ -483,7 +557,7 @@ public class sessionController {
 
         if (codeResult.isEmpty() || codeResult.get().trim().isEmpty()) return;
 
-        // Second dialog for Description
+        // Description input
         TextInputDialog descDialog = new TextInputDialog();
         descDialog.setTitle("Add Subject");
         descDialog.setHeaderText("Enter Subject Description");
@@ -495,20 +569,55 @@ public class sessionController {
         String code = codeResult.get().trim();
         String description = descResult.get().trim();
 
+        // Create a custom dialog for Semester & Year
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Add Subject Details");
+
+        ComboBox<Integer> semCombo = new ComboBox<>();
+        semCombo.getItems().addAll(1, 2); // Summer is 3
+        semCombo.setValue(1);
+
+        ComboBox<String> yearCombo = new ComboBox<>();
+        yearCombo.getItems().addAll(
+            "2024-2025",
+            "2025-2026",
+            "2026-2027"
+        );
+        yearCombo.setValue("2024-2025");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.addRow(0, new Label("Semester:"), semCombo);
+        grid.addRow(1, new Label("School Year:"), yearCombo);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) return;
+
+        int sem = semCombo.getValue();
+        String schoolYear = yearCombo.getValue();
+
         try {
             PreparedStatement ps = dc.con.prepareStatement(
-                "INSERT INTO subject (code, description, instructor_id) VALUES (?, ?, ?)", Statement.RETURN_GENERATED_KEYS
+                "INSERT INTO subject (code, description, instructor_id, sem, year) VALUES (?, ?, ?, ?, ?)",
+                Statement.RETURN_GENERATED_KEYS
             );
             ps.setString(1, code);
             ps.setString(2, description);
             ps.setString(3, instructorID);
+            ps.setInt(4, sem);
+            ps.setString(5, schoolYear);
+
             int rows = ps.executeUpdate();
 
             if (rows > 0) {
                 ResultSet keys = ps.getGeneratedKeys();
                 if (keys.next()) {
                     String newId = keys.getString(1);
-                    subject newSubject = new subject(newId, code, description);
+                    subject newSubject = new subject(newId, code, description, sem+"", schoolYear);
                     subjects.add(newSubject);
                     subjectTable.refresh();
                 }
@@ -519,6 +628,7 @@ public class sessionController {
             e.printStackTrace();
         }
     }
+
     @FXML private Pane taskPane, subjectPane, studentPassPane;
     public void taskPaneShow()throws Exception{
         taskPane.setVisible(true);

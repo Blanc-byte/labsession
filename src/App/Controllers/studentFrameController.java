@@ -35,6 +35,7 @@ public class studentFrameController {
     String taskCode="", taskID="";
     boolean ifOnSession=false;
     DatabaseConnection dc = new DatabaseConnection();
+    @FXML private Label user;
     public void initialize()throws Exception{
         dc.connect();
         File read = new File("studentID.txt");
@@ -43,6 +44,13 @@ public class studentFrameController {
             studentId=sc.nextLine();
             System.out.println("studentId: "+studentId);
         }
+        String sql = "SELECT * FROM student WHERE studentID = '"+studentId+"'";
+        PreparedStatement ps = dc.con.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            user.setText("Welcome "+rs.getString("firstname")+" "+rs.getString("lastname"));
+        }
+        
     }
     @FXML private TableView<viewStudentPerformance> myTaskTable;
     @FXML private TableColumn<viewStudentPerformance, String> taskSubCode, taskSubDes, taskTask, taskScore;
@@ -172,6 +180,29 @@ public class studentFrameController {
                 if (rs.next()) {
                     ifOnSession=true;
                     taskID=rs.getString("task_id");
+                    
+                    // 2️⃣ Check in performance table if this student already submitted for this task
+                    PreparedStatement checkPerformance = dc.con.prepareStatement(
+                        "SELECT * FROM performance WHERE student_id = ? AND task_id = ?"
+                    );
+                    checkPerformance.setString(1, studentId);  // your logged-in student ID
+                    checkPerformance.setString(2, taskID);
+
+                    ResultSet rsCheck = checkPerformance.executeQuery();
+                    if (rsCheck.next()) {
+                        // 🚫 Student already submitted this task
+                        showAlert(Alert.AlertType.WARNING, "Already Submitted",
+                            "You have already submitted this task. You cannot do it again.");
+                        rsCheck.close();
+                        checkPerformance.close();
+                        rs.close();
+                        ps.close();
+                        return; // stop here
+                    }
+                    rsCheck.close();
+                    checkPerformance.close();
+
+                    
                     
                     homePane.setVisible(false);
                     sessionPane.setVisible(true);

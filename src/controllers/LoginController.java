@@ -52,7 +52,8 @@ public class LoginController {
         String username = usernameField.getText().trim();
         String password = passwordField.getText().trim();
         String userType = userComboBox.getValue();
-
+        
+        System.out.println(userType);
         if (username.isEmpty() || password.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Input Error", "Please fill in both fields.");
             return;
@@ -65,6 +66,7 @@ public class LoginController {
         new Thread(() -> {
             
             try {
+                System.out.println(userType);
                 isValid = validateLogin(username, password, userType);
             } catch (Exception ex) {
                 Logger.getLogger(LoginController.class.getName()).log(Level.SEVERE, null, ex);
@@ -121,8 +123,12 @@ public class LoginController {
                     case "STUDENT":
                         id=rs.getString("studentID");
                         break;
+                    case "ADMIN":
+                        id=rs.getString("id");
+                        System.out.println("ADMIN Log in");
+                        break;
                     default:
-                        return false;
+                        return true;
                 }
                 return true;
             }

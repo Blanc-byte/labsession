@@ -18,17 +18,31 @@ public class PerformanceView {
     private final StringProperty message;
     private final StringProperty score;
     private final StringProperty fileName;
+    private final StringProperty dateSub;
 
-    public PerformanceView(String id, String studentName, String file, String message, String score, String fileName) {
+    public PerformanceView(String id, String studentName, String file, String message, String score, String fileName, String dateSub) {
         this.id = new SimpleStringProperty(id);
         this.studentName = new SimpleStringProperty(studentName);
         this.file = new SimpleStringProperty(file);
         this.message = new SimpleStringProperty(message);
         this.score = new SimpleStringProperty(score);
         this.fileName = new SimpleStringProperty(fileName);
+        this.dateSub = new SimpleStringProperty(dateSub);
     }
 
+    
+    public String getDateSub() {
+        return dateSub.get();
+    }
+    public StringProperty dateSubProperty() {
+        return dateSub;
+    }
+    public void setDateSub(String id) {
+        this.dateSub.set(id);
+    }
     // Getters
+    
+    
     public String getId() {
         return id.get();
     }
@@ -54,6 +68,7 @@ public class PerformanceView {
     }
 
     // Properties
+    
     public StringProperty idProperty() {
         return id;
     }
@@ -80,6 +95,7 @@ public class PerformanceView {
     }
 
     // Optional: Setters if needed
+    
     public void setId(String id) {
         this.id.set(id);
     }

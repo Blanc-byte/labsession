@@ -15,11 +15,40 @@ public class subject {
     private final StringProperty id;
     private final StringProperty code;
     private final StringProperty description;
+    private final StringProperty sem;
+    private final StringProperty year;
 
-    public subject(String id, String code, String description) {
+    public subject(String id, String code, String description, String sem, String year) {
         this.id = new SimpleStringProperty(id);
         this.code = new SimpleStringProperty(code);
         this.description = new SimpleStringProperty(description);
+        this.sem = new SimpleStringProperty(sem);
+        this.year = new SimpleStringProperty(year);
+    }
+    // ID
+    public String getYear() {
+        return year.get();
+    }
+
+    public void setYear(String value) {
+        year.set(value);
+    }
+
+    public StringProperty yearProperty() {
+        return year;
+    }
+    
+    // ID
+    public String getSem() {
+        return sem.get();
+    }
+
+    public void setSem(String value) {
+        sem.set(value);
+    }
+
+    public StringProperty semProperty() {
+        return sem;
     }
 
     // ID

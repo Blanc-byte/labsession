@@ -21,10 +21,11 @@ public class TaskSubjectView {
     private final StringProperty subjectDescription;
     private final StringProperty duration;
     private final StringProperty status;
+    private final StringProperty dateSub;
 
     public TaskSubjectView(String taskId, String task, String taskDescription,
                            String subjectCode, String subjectDescription,
-                           String duration, String status) {
+                           String duration, String status, String dateSub) {
         this.taskId = new SimpleStringProperty(taskId);
         this.task = new SimpleStringProperty(task);
         this.taskDescription = new SimpleStringProperty(taskDescription);
@@ -32,9 +33,14 @@ public class TaskSubjectView {
         this.subjectDescription = new SimpleStringProperty(subjectDescription);
         this.duration = new SimpleStringProperty(duration);
         this.status = new SimpleStringProperty(status);
+        this.dateSub = new SimpleStringProperty(dateSub);
     }
 
     // Getters
+    public String getDateSub() {
+        return dateSub.get();
+    }
+    
     public String getTaskId() {
         return taskId.get();
     }
@@ -64,6 +70,12 @@ public class TaskSubjectView {
     }
 
     // Setters
+    
+    
+    public void setDateSub(String id) {
+        this.dateSub.set(id);
+    }
+    
     public void setTaskId(String value) {
         taskId.set(value);
     }
@@ -93,6 +105,11 @@ public class TaskSubjectView {
     }
 
     // Property accessors (for TableView binding)
+    
+    public StringProperty dateSubProperty() {
+        return dateSub;
+    }
+    
     public StringProperty taskIdProperty() {
         return taskId;
     }
