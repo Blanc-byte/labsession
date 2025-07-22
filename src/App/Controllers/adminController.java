@@ -633,8 +633,19 @@ public class adminController {
         grid.setVgap(10);
 
         TextField fullnameField = new TextField();
-        TextField genderField = new TextField();
+        ComboBox<String> genderCombo = new ComboBox<>();
+        genderCombo.getItems().addAll("Male", "Female");
         TextField ageField = new TextField();
+        ageField.setEditable(false);
+
+        DatePicker birthdayPicker = new DatePicker();
+        birthdayPicker.valueProperty().addListener((obs, oldDate, newDate) -> {
+            if (newDate != null) {
+                int calculatedAge = Period.between(newDate, LocalDate.now()).getYears();
+                ageField.setText(String.valueOf(calculatedAge));
+            }
+        });
+
         TextField emailField = new TextField();
         TextField contactField = new TextField();
         DatePicker dateHiredPicker = new DatePicker();
@@ -642,13 +653,14 @@ public class adminController {
         PasswordField passwordField = new PasswordField();
 
         grid.addRow(0, new Label("Full Name:"), fullnameField);
-        grid.addRow(1, new Label("Gender:"), genderField);
-        grid.addRow(2, new Label("Age:"), ageField);
-        grid.addRow(3, new Label("Email:"), emailField);
-        grid.addRow(4, new Label("Contact:"), contactField);
-        grid.addRow(5, new Label("Date Hired:"), dateHiredPicker);
-        grid.addRow(6, new Label("Username:"), usernameField);
-        grid.addRow(7, new Label("Password:"), passwordField);
+        grid.addRow(1, new Label("Gender:"), genderCombo);
+        grid.addRow(2, new Label("Birthday:"), birthdayPicker);
+        grid.addRow(3, new Label("Age:"), ageField);
+        grid.addRow(4, new Label("Email:"), emailField);
+        grid.addRow(5, new Label("Contact:"), contactField);
+        grid.addRow(6, new Label("Date Hired:"), dateHiredPicker);
+        grid.addRow(7, new Label("Username:"), usernameField);
+        grid.addRow(8, new Label("Password:"), passwordField);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -656,19 +668,49 @@ public class adminController {
         Optional<ButtonType> result = dialog.showAndWait();
 
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                PreparedStatement ps = dc.con.prepareStatement(
-                    "INSERT INTO faculty (fullname, gender, age, email, contact, datehired, username, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                );
+            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+            String email = emailField.getText();
 
+            // Basic validation
+            if (fullnameField.getText().isEmpty() || genderCombo.getValue() == null || birthdayPicker.getValue() == null ||
+                email.isEmpty() || contactField.getText().isEmpty() || dateHiredPicker.getValue() == null ||
+                usernameField.getText().isEmpty() || passwordField.getText().isEmpty()) {
+
+                new Alert(Alert.AlertType.WARNING, "Please fill in all fields.").showAndWait();
+                showAddFacultyDialog(); // reopen
+                return;
+            }
+
+            if (!email.matches(emailRegex)) {
+                new Alert(Alert.AlertType.ERROR, "Invalid email format.").showAndWait();
+                showAddFacultyDialog(); // reopen
+                return;
+            }
+
+            try {
+                // Check if username already exists
+                PreparedStatement checkStmt = dc.con.prepareStatement("SELECT COUNT(*) FROM faculty WHERE username = ?");
+                checkStmt.setString(1, usernameField.getText());
+                ResultSet rs = checkStmt.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    new Alert(Alert.AlertType.WARNING, "Username already exists.").showAndWait();
+                    return;
+                }
+
+                // Insert data
+                PreparedStatement ps = dc.con.prepareStatement(
+                    "INSERT INTO faculty (fullname, gender, age, email, contact, datehired, username, password, birthday) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                );
                 ps.setString(1, fullnameField.getText());
-                ps.setString(2, genderField.getText());
+                ps.setString(2, genderCombo.getValue());
                 ps.setString(3, ageField.getText());
-                ps.setString(4, emailField.getText());
+                ps.setString(4, email);
                 ps.setString(5, contactField.getText());
                 ps.setDate(6, java.sql.Date.valueOf(dateHiredPicker.getValue()));
                 ps.setString(7, usernameField.getText());
                 ps.setString(8, passwordField.getText());
+                ps.setDate(9, java.sql.Date.valueOf(birthdayPicker.getValue()));
 
                 int rowsInserted = ps.executeUpdate();
                 ps.close();
@@ -676,17 +718,18 @@ public class adminController {
                 if (rowsInserted > 0) {
                     Alert alert = new Alert(Alert.AlertType.INFORMATION, "Faculty added successfully.");
                     alert.showAndWait();
-                    loadFacultyTable(); // Refresh the table
+                    loadFacultyTable();
                 } else {
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Failed to add faculty.");
-                    alert.showAndWait();
+                    new Alert(Alert.AlertType.ERROR, "Failed to add faculty.").showAndWait();
                 }
+
             } catch (SQLException e) {
                 e.printStackTrace();
                 new Alert(Alert.AlertType.ERROR, "Database error: " + e.getMessage()).showAndWait();
             }
         }
     }
+
     
     @FXML private Pane studentPane, facultyPane;
     public void studentClick()throws Exception{
