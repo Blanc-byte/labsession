@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 18, 2025 at 07:54 AM
+-- Generation Time: Jul 22, 2025 at 05:46 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -108,19 +108,20 @@ CREATE TABLE `faculty` (
   `datehired` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `username` varchar(50) DEFAULT NULL,
   `password` varchar(50) DEFAULT NULL,
-  `status` varchar(254) NOT NULL DEFAULT 'Inactive'
+  `status` varchar(254) NOT NULL DEFAULT 'Inactive',
+  `birthday` date DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `faculty`
 --
 
-INSERT INTO `faculty` (`facultyID`, `fullname`, `gender`, `age`, `email`, `contact`, `datehired`, `username`, `password`, `status`) VALUES
-(1, 'Neil A Mutia', 'male', 27, 'mutia@gmail.com', '09123456789', '2025-05-05 07:35:36', 'neil1234', 'nam12345', 'Inactive'),
-(2, 'crab king', 'male', 23, 'king@gmail.com', '09873463442', '2025-05-22 06:28:25', 'jhon', '123', 'Inactive'),
-(3, 'maramag', 'male', 23, 'mara@gmail.com', '0946627311', '2025-05-04 16:00:00', 'manji', '12345678', 'Inactive'),
-(23412, 'rogene abijay', 'male', 31, 'rogene@gmail.com', '091234567893', '2025-05-05 16:00:00', 'rogene', '12345678', 'Inactive'),
-(23413, 'lalah', 'mali', 23, 'lalah@gmail.com', '0932874', '2025-07-18 05:24:36', 'lalah', 'lalah', 'Active');
+INSERT INTO `faculty` (`facultyID`, `fullname`, `gender`, `age`, `email`, `contact`, `datehired`, `username`, `password`, `status`, `birthday`) VALUES
+(1, 'Neil A Mutia', 'male', 27, 'mutia@gmail.com', '09123456789', '2025-05-05 07:35:36', 'neil1234', 'nam12345', 'Inactive', '2025-07-22'),
+(2, 'crab king', 'male', 23, 'king@gmail.com', '09873463442', '2025-05-22 06:28:25', 'jhon', '123', 'Inactive', '2025-07-22'),
+(3, 'maramag', 'male', 23, 'mara@gmail.com', '0946627311', '2025-05-04 16:00:00', 'manji', '12345678', 'Inactive', '2025-07-22'),
+(23412, 'rogene abijay', 'male', 31, 'rogene@gmail.com', '091234567893', '2025-05-05 16:00:00', 'rogene', '12345678', 'Inactive', '2025-07-22'),
+(23413, 'lalah', 'mali', 23, 'lalah@gmail.com', '0932874', '2025-07-18 05:24:36', 'lalah', 'lalah', 'Active', '2025-07-22');
 
 -- --------------------------------------------------------
 
@@ -309,7 +310,7 @@ ALTER TABLE `attendance`
 -- AUTO_INCREMENT for table `faculty`
 --
 ALTER TABLE `faculty`
-  MODIFY `facultyID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23414;
+  MODIFY `facultyID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23415;
 
 --
 -- AUTO_INCREMENT for table `performance`
