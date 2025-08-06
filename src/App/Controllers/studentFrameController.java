@@ -13,6 +13,8 @@ import App.Models.viewStudentPerformance;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -302,13 +304,14 @@ public class studentFrameController {
 
     @FXML private TextArea message;
     @FXML private Label task, description, duration, filePath;
+    boolean taskOngoing=false;
     public void validateTaskCode() throws Exception {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Validate Task Code");
         dialog.setHeaderText("Enter Task Code");
         dialog.setContentText("Task Code:");
 
-        // Clear any previous session info
+        // Clear previous session info
         task.setText("");
         description.setText("");
         duration.setText("");
@@ -333,63 +336,82 @@ public class studentFrameController {
                         return;
                     }
 
-                    // 1️⃣ Read task's section & year
-                    String taskSec  = rs.getString("sec");
+                    // 1️⃣ Read task's section, year, and end time
+                    String taskSec = rs.getString("sec");
                     String taskYear = rs.getString("year");
-                    String taskId   = rs.getString("task_id");
-                    taskID=taskId;
-                    // 2️⃣ Fetch this student's sec & year
-                    String studentSec, studentYear;
-                    try (
-                        PreparedStatement ps2 = dc.con.prepareStatement(
-                            "SELECT sec, year FROM student WHERE studentID = ?"
-                        )
-                    ) {
-                        ps2.setString(1, studentId);
-                        try (ResultSet rs2 = ps2.executeQuery()) {
-                            if (!rs2.next()) {
-                                showAlert(Alert.AlertType.ERROR, "Error", "Cannot find your student record.");
-                                return;
+                    String taskId = rs.getString("task_id");
+                    taskID = taskId;
+
+                    Timestamp timeDateEnd = rs.getTimestamp("timeDateEnd");
+                    LocalDateTime now = LocalDateTime.now();
+
+                    if (timeDateEnd != null) {
+                        LocalDateTime endTime = timeDateEnd.toLocalDateTime();
+                        long secondsRemaining = Duration.between(now, endTime).getSeconds();
+
+                        // If time is up → close and block
+                        if (secondsRemaining <= 0) {
+                            try (PreparedStatement closeTask = dc.con.prepareStatement(
+                                    "UPDATE tasks SET status = 'Done' WHERE task_id = ?")) {
+                                closeTask.setString(1, taskId);
+                                closeTask.executeUpdate();
                             }
-                            studentSec  = rs2.getString("sec");
-                            studentYear = rs2.getString("year");
+                            showAlert(Alert.AlertType.WARNING, "Task Closed", "This task has already ended.");
+                            return;
                         }
-                    }
 
-                    // 3️⃣ Validate match
-                    if (!taskSec.equals(studentSec) || !taskYear.equals(studentYear)) {
-                        showAlert(Alert.AlertType.WARNING,
-                                  "Access Denied",
-                                  "This task can`t be access!");
-                        return;
-                    }
-
-                    // 4️⃣ Check previous submission
-                    try (
-                        PreparedStatement checkPerf = dc.con.prepareStatement(
-                            "SELECT 1 FROM performance WHERE student_id = ? AND task_id = ?"
-                        )
-                    ) {
-                        checkPerf.setString(1, studentId);
-                        checkPerf.setString(2, taskId);
-                        try (ResultSet rsCheck = checkPerf.executeQuery()) {
-                            if (rsCheck.next()) {
-                                showAlert(Alert.AlertType.WARNING,
-                                          "Already Submitted",
-                                          "You have already submitted this task.");
-                                return;
+                        // 2️⃣ Fetch student's section & year
+                        String studentSec, studentYear;
+                        try (
+                            PreparedStatement ps2 = dc.con.prepareStatement(
+                                "SELECT sec, year FROM student WHERE studentID = ?"
+                            )
+                        ) {
+                            ps2.setString(1, studentId);
+                            try (ResultSet rs2 = ps2.executeQuery()) {
+                                if (!rs2.next()) {
+                                    showAlert(Alert.AlertType.ERROR, "Error", "Cannot find your student record.");
+                                    return;
+                                }
+                                studentSec = rs2.getString("sec");
+                                studentYear = rs2.getString("year");
                             }
                         }
-                    }
 
-                    // 5️⃣ All good—open session
-                    homePane.setVisible(false);
-                    sessionPane.setVisible(true);
-                    task.setText(rs.getString("task"));
-                    description.setText(rs.getString("description"));
-                    String rawDuration = rs.getString("duration");
-                    duration.setText(rawDuration);
-                    startCountdown(rawDuration);
+                        // 3️⃣ Validate section/year match
+                        if (!taskSec.equals(studentSec) || !taskYear.equals(studentYear)) {
+                            showAlert(Alert.AlertType.WARNING, "Access Denied", "This task can't be accessed!");
+                            return;
+                        }
+
+                        // 4️⃣ Check previous submission
+                        try (
+                            PreparedStatement checkPerf = dc.con.prepareStatement(
+                                "SELECT 1 FROM performance WHERE student_id = ? AND task_id = ?"
+                            )
+                        ) {
+                            checkPerf.setString(1, studentId);
+                            checkPerf.setString(2, taskId);
+                            try (ResultSet rsCheck = checkPerf.executeQuery()) {
+                                if (rsCheck.next()) {
+                                    showAlert(Alert.AlertType.WARNING, "Already Submitted", "You have already submitted this task.");
+                                    return;
+                                }
+                            }
+                        }
+
+                        // 5️⃣ Open session
+                        homePane.setVisible(false);
+                        sessionPane.setVisible(true);
+                        task.setText(rs.getString("task"));
+                        description.setText(rs.getString("description"));
+                        taskOngoing=true;
+                        ifOnSession=true;
+                        // ✅ Start countdown using seconds remaining
+                        startCountdown(secondsRemaining);
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Missing Deadline", "This task has no end time set.");
+                    }
                 }
 
             } catch (SQLException e) {
@@ -399,28 +421,13 @@ public class studentFrameController {
         });
     }
 
-    private void startCountdown(String durationStr) {
-        // Stop previous timer if running
+    // Overloaded countdown for seconds remaining
+    private void startCountdown(long secondsRemaining) {
         if (countdown != null) {
             countdown.stop();
         }
 
-        // Parse duration
-        int hours = 0, minutes = 0;
-        try {
-            if (durationStr.contains(":")) {
-                String[] parts = durationStr.split(":");
-                hours = Integer.parseInt(parts[0]);
-                minutes = Integer.parseInt(parts[1]);
-            } else {
-                hours = Integer.parseInt(durationStr);
-            }
-        } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.ERROR, "Invalid Format", "Duration format is incorrect.");
-            return;
-        }
-
-        totalSeconds = hours * 3600 + minutes * 60;
+        totalSeconds = (int) secondsRemaining;
 
         countdown = new Timeline(
             new KeyFrame(javafx.util.Duration.seconds(1), event -> {
@@ -435,22 +442,21 @@ public class studentFrameController {
                     homePane.setVisible(true);
                     sessionPane.setVisible(false);
                     duration.setText("");
-                    message.setText("");    
-                    try {
-                        PreparedStatement insert = dc.con.prepareStatement(
-                            "INSERT INTO performance (student_id, score, task_id, file, file_path, message) VALUES (?, NULL, ?, NULL, NULL, ?)"
-                        );
+                    message.setText("");
+
+                    try (PreparedStatement insert = dc.con.prepareStatement(
+                            "INSERT INTO performance (student_id, score, task_id, file, file_path, message) VALUES (?, NULL, ?, NULL, NULL, ?)")) {
                         insert.setString(1, studentId);
                         insert.setString(2, taskID);
                         insert.setString(3, message.getText());
                         insert.executeUpdate();
-                        insert.close();
-
                         showAlert(Alert.AlertType.INFORMATION, "Submitted", "Performance record inserted.");
                     } catch (SQLException e) {
                         e.printStackTrace();
                         showAlert(Alert.AlertType.ERROR, "Insert Error", "Failed to insert into performance.");
                     }
+                    
+                        ifOnSession=false;
                     countdown.stop();
                 }
             })
@@ -459,6 +465,7 @@ public class studentFrameController {
         countdown.setCycleCount(Timeline.INDEFINITE);
         countdown.play();
     }
+
 
     private void showAlert(Alert.AlertType type, String title, String content) {
         Alert alert = new Alert(type);
@@ -493,6 +500,8 @@ public class studentFrameController {
         if(!ifOnSession){
             homePane.setVisible(true);
             tasksPane.setVisible(false);
+        }else{
+            showAlert(Alert.AlertType.ERROR, "Error", "Currently in Session");
         }
     }
     public void taskClick()throws Exception{
@@ -500,7 +509,10 @@ public class studentFrameController {
             homePane.setVisible(false);
             tasksPane.setVisible(true);
             loadMyTaskTable();
+        }else{
+            showAlert(Alert.AlertType.ERROR, "Error", "Currently in Session");
         }
+        
         
     }
 }

@@ -64,10 +64,9 @@
                 <TableColumn fx:id="taskDesc" prefWidth="148.79998779296875" text="Task Description" />
                   <TableColumn fx:id="subCodeCol" prefWidth="59.199951171875" text="Code" />
                   <TableColumn fx:id="subDesc" prefWidth="87.19998168945312" text="Description" />
-                  <TableColumn fx:id="dur" prefWidth="62.4000244140625" text="Duration" />
-                  <TableColumn fx:id="points" prefWidth="55.20001220703125" text="Points" />
-                  <TableColumn fx:id="dateSub" prefWidth="101.5999755859375" text="Date" />
-                  <TableColumn fx:id="taskActions" prefWidth="105.60009765625" text="Actions" />
+                  <TableColumn fx:id="points" prefWidth="47.20001220703125" text="Points" />
+                  <TableColumn fx:id="dateSub" prefWidth="138.39996337890625" text="Date/Time End" />
+                  <TableColumn fx:id="taskActions" prefWidth="142.4000244140625" text="Actions" />
               </columns>
             </TableView>
          </children>

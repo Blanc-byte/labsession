@@ -52,8 +52,22 @@ public class adminController {
         dc.connect();
         loadFacultyTable();
         loadStudents();
+        updateExpiredTasks();
+        
     }
-    
+    public void updateExpiredTasks() {
+        try (PreparedStatement ps = dc.con.prepareStatement(
+            "UPDATE tasks SET status = 'Done' WHERE status = 'Pending' AND timeDateEnd <= NOW()"
+        )) {
+            int updatedRows = ps.executeUpdate();
+            if (updatedRows > 0) {
+                System.out.println(updatedRows + " task(s) marked as Done.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+//            showAlert(Alert.AlertType.ERROR, "Error", "Failed to update expired tasks:\n" + e.getMessage());
+        }
+    }
     public void handleAddStudent() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Add Student");

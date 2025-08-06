@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 06, 2025 at 08:32 AM
+-- Generation Time: Aug 06, 2025 at 06:00 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -121,7 +121,7 @@ INSERT INTO `faculty` (`facultyID`, `fullname`, `gender`, `age`, `email`, `conta
 (2, 'crab king', 'male', 23, 'king@gmail.com', '09873463442', '2025-05-22 06:28:25', 'jhon', '123', 'Inactive', '2025-07-22'),
 (3, 'maramag', 'male', 23, 'mara@gmail.com', '0946627311', '2025-05-04 16:00:00', 'manji', '12345678', 'Inactive', '2025-07-22'),
 (23412, 'rogene abijay', 'male', 31, 'rogene@gmail.com', '091234567893', '2025-05-05 16:00:00', 'rogene', '12345678', 'Inactive', '2025-07-22'),
-(23413, 'lalah', 'mali', 23, 'lalah@gmail.com', '0932874', '2025-07-18 05:24:36', 'lalah', 'lalah', 'Active', '2025-07-22');
+(23413, 'lalah', 'mali', 23, 'lalah@gmail.com', '0932874', '2025-08-06 14:52:00', 'lalah', 'lalah', 'Inactive', '2025-07-22');
 
 -- --------------------------------------------------------
 
@@ -224,8 +224,18 @@ CREATE TABLE `tasks` (
   `date_sub` datetime(6) NOT NULL DEFAULT current_timestamp(6),
   `sec` varchar(254) DEFAULT NULL,
   `year` int(11) DEFAULT NULL,
-  `points` int(11) NOT NULL DEFAULT 100
+  `points` int(11) NOT NULL DEFAULT 100,
+  `timeDateEnd` datetime(6) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tasks`
+--
+
+INSERT INTO `tasks` (`task_id`, `task`, `status`, `subject_id`, `duration`, `instructor_id`, `task_code`, `description`, `sem`, `school_year`, `date_sub`, `sec`, `year`, `points`, `timeDateEnd`) VALUES
+(19, 'asd', 'Done', 439, '1', 23413, '123', 'asd', 1, '2025-2026', '2025-08-06 17:50:54.254786', 'A', 1, 120, '2025-08-06 07:30:00.000000'),
+(20, 'act', 'Pending', 439, '1', 23413, 'act1', 'afgae', 1, '2025-2026', '2025-08-06 22:29:59.968971', 'A', 1, 150, '2025-08-06 23:00:00.000000'),
+(21, 'sad', 'Pending', 439, '1', 23413, 'sadsad', 'asdasda', 1, '2025-2026', '2025-08-06 22:51:57.573245', 'A', 1, 140, '2025-08-06 23:59:00.000000');
 
 --
 -- Indexes for dumped tables
@@ -317,7 +327,7 @@ ALTER TABLE `subject`
 -- AUTO_INCREMENT for table `tasks`
 --
 ALTER TABLE `tasks`
-  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
