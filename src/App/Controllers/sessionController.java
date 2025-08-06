@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.*;
@@ -23,6 +24,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
@@ -50,6 +52,14 @@ public class sessionController {
         
         loadSubTable();
         loadTasksToTable();
+        semCombo.getItems().addAll("1st", "2nd", "Mid Year");
+        yearCombo.getItems().addAll("2024-2025", "2025-2026");
+
+        semCombo.setValue("1st"); // optional default
+        yearCombo.setValue("2024-2025"); // optional default
+        semCombo.setOnAction(e -> filterSubjects());
+        yearCombo.setOnAction(e -> filterSubjects());
+
     }
     
     @FXML
@@ -133,25 +143,67 @@ public class sessionController {
                 });
                 scoreBtn.setOnAction(e -> {
                     PerformanceView performance = getTableView().getItems().get(getIndex());
+
+                    try {
+                        PreparedStatement getPoints = dc.con.prepareStatement(
+                            "SELECT points FROM tasks WHERE task_id = ?"
+                        );
+                        getPoints.setString(1, taskId); // Ensure PerformanceView has taskId
+                        ResultSet rs = getPoints.executeQuery();
+                        if (rs.next()) {
+                            totalPoints = rs.getInt("points");
+                        }
+                        rs.close();
+                        getPoints.close();
+                    } catch (SQLException ex) {
+                        new Alert(Alert.AlertType.ERROR, "Failed to get total points: " + ex.getMessage()).showAndWait();
+                        return;
+                    }
+
+                    if (totalPoints <= 0) {
+                        new Alert(Alert.AlertType.WARNING, "This task has no points set.").showAndWait();
+                        return;
+                    }
+
+                    // 2️⃣ Ask teacher for points earned
                     TextInputDialog dialog = new TextInputDialog();
                     dialog.setTitle("Enter Score");
                     dialog.setHeaderText("Score for " + performance.getStudentName());
-                    dialog.setContentText("Score:");
+                    dialog.setContentText("Points Earned (out of " + totalPoints + "):");
 
-                    dialog.showAndWait().ifPresent(score -> {
+                    dialog.showAndWait().ifPresent(earned -> {
                         try {
-                            PreparedStatement ps = dc.con.prepareStatement("UPDATE performance SET score = ? WHERE id = ?");
-                            ps.setString(1, score);
+                            int earnedPoints = Integer.parseInt(earned);
+                            if (earnedPoints < 0 || earnedPoints > totalPoints) {
+                                new Alert(Alert.AlertType.WARNING,
+                                        "Points must be between 0 and " + totalPoints).showAndWait();
+                                return;
+                            }
+
+                            // Store only numeric earnedPoints in DB
+                            PreparedStatement ps = dc.con.prepareStatement(
+                                "UPDATE performance SET score = ? WHERE id = ?"
+                            );
+                            
+                            BigDecimal percentage = BigDecimal.valueOf((earnedPoints * 100.0) / totalPoints);
+                            ps.setBigDecimal(1, percentage);
+
                             ps.setString(2, performance.getId());
                             ps.executeUpdate();
                             ps.close();
+
                             loadPerformanceData();
                             studentPass.refresh();
+
+                        } catch (NumberFormatException nfe) {
+                            new Alert(Alert.AlertType.WARNING, "Please enter a valid number.").showAndWait();
                         } catch (SQLException ex) {
                             new Alert(Alert.AlertType.ERROR, "Failed to update score: " + ex.getMessage()).showAndWait();
                         }
                     });
+
                 });
+
             }
 
             @Override
@@ -165,12 +217,15 @@ public class sessionController {
         loadPerformanceData();
         studentPass.setItems(performanceList);
     }
+    // 1️⃣ Get total points for the task
+    int totalPoints = 0;
 
     @FXML private Label totalPass;
     String taskId = "";
     int count = 0;
     ObservableList<PerformanceView> performanceList = FXCollections.observableArrayList();
     public void loadPerformanceData() throws SQLException {
+        totalPass.setText("Total: ");
         performanceList.clear();
         count = 0;
         String sql = """
@@ -193,14 +248,14 @@ public class sessionController {
             ));
             count++;
         }
-        totalPass.setText(""+count);
+        totalPass.setText(totalPass.getText()+count);
 
         rs.close();
         ps.close();
     }
     
     @FXML private TableView<TaskSubjectView> taskTable;
-    @FXML private TableColumn<TaskSubjectView, String> task, taskDesc, subCodeCol, subDesc, dur, dateSub;
+    @FXML private TableColumn<TaskSubjectView, String> task, taskDesc, subCodeCol, subDesc, dur, dateSub, points;
     @FXML private TableColumn<TaskSubjectView, Void> taskActions;
     public void loadTasksToTable()throws Exception{
         task.setCellValueFactory(data -> data.getValue().taskProperty());
@@ -209,6 +264,7 @@ public class sessionController {
         subDesc.setCellValueFactory(data -> data.getValue().subjectDescriptionProperty());
         dur.setCellValueFactory(data -> data.getValue().durationProperty());
         dateSub.setCellValueFactory(cellData -> cellData.getValue().dateSubProperty());
+        points.setCellValueFactory(cellData -> cellData.getValue().pointsProperty());
         taskSubjectList.clear();
         loadTaskSubjectData();
         taskTable.setItems(taskSubjectList);
@@ -284,7 +340,8 @@ public class sessionController {
                 s.description AS subject_description, 
                 t.duration,
                 t.status,
-                t.date_sub
+                t.date_sub,
+                t.points
             FROM tasks t
             JOIN subject s ON t.subject_id = s.id
             WHERE t.instructor_id = '"""+instructorID+"' ORDER BY t.date_sub desc";
@@ -301,18 +358,34 @@ public class sessionController {
                 rs.getString("subject_description"),
                 rs.getString("duration"),
                 rs.getString("status"),
-                rs.getString("date_sub")
+                rs.getString("date_sub"),
+                rs.getString("points")
             ));
         }
 
         rs.close();
         ps.close();
     }
+    @FXML private ComboBox<String> semCombo;
+    @FXML private ComboBox<String> yearCombo;
+    
+    public void filterSubjects() {
+        String selectedSem = semCombo.getValue();
+        String selectedYear = yearCombo.getValue();
+
+        FilteredList<subject> filtered = new FilteredList<>(subjects, s -> {
+            boolean matchesSem = selectedSem == null || s.semProperty().get().equalsIgnoreCase(selectedSem);
+            boolean matchesYear = selectedYear == null || s.yearProperty().get().equalsIgnoreCase(selectedYear);
+            return matchesSem && matchesYear;
+        });
+
+        subjectTable.setItems(filtered);
+    }
 
 
     @FXML private TableView<subject> subjectTable;
     @FXML private TableColumn<subject, String> subCode, subName, subSem, subYear;
-    @FXML private TableColumn<subject, Void> createSession, manageSubject;
+    @FXML private TableColumn<subject, Void> manageSubject;
     ObservableList<subject> subjects = FXCollections.observableArrayList();
     public void loadSubTable() throws Exception {
         subjects.clear();
@@ -323,10 +396,148 @@ public class sessionController {
         subSem.setCellValueFactory(cellData -> cellData.getValue().semProperty());
         subYear.setCellValueFactory(cellData -> cellData.getValue().yearProperty());
         subjectTable.setItems(subjects);
+//
+//        // Create button (no action)
+//        createSession.setCellFactory(col -> new TableCell<>() {
+//            private final Button createBtn = new Button("Create");
+//
+//            {
+//                createBtn.setOnAction(event -> {
+//                    subject selected = getTableView().getItems().get(getIndex());
+//                    if (selected == null) return;
+//
+//                    Dialog<ButtonType> dialog = new Dialog<>();
+//                    dialog.setTitle("Create Session");
+//
+//                    // Input fields
+//                    TextField taskField = new TextField();
+//                    TextField durationField = new TextField();
+//                    TextField taskCode = new TextField();
+//                    TextArea description = new TextArea();
+//                    description.setWrapText(true);
+//
+//                    // ✅ NEW: Semester ComboBox
+//                    ComboBox<String> semCombo = new ComboBox<>();
+//                    semCombo.getItems().addAll("1", "2");
+//                    semCombo.setValue("1");
+//
+//                    // ✅ NEW: School Year ComboBox
+//                    ComboBox<String> schoolYearCombo = new ComboBox<>();
+//                    int currentYear = LocalDate.now().getYear();
+//                    for (int i = -1; i <= 3; i++) {
+//                        int start = currentYear + i;
+//                        schoolYearCombo.getItems().add(start + "-" + (start + 1));
+//                    }
+//                    schoolYearCombo.setValue(currentYear + "-" + (currentYear + 1));
+//                    
+//
+//                    // ✅ NEW: Section ComboBox
+//                    ComboBox<String> sectionCombo = new ComboBox<>();
+//                    sectionCombo.getItems().addAll("A", "B", "C", "D"); // customize as needed
+//                    sectionCombo.setValue("A");
+//
+//                    // ✅ NEW: Year Level ComboBox
+//                    ComboBox<String> yearLevelCombo = new ComboBox<>();
+//                    yearLevelCombo.getItems().addAll("1", "2", "3", "4"); // year level (not school year)
+//                    yearLevelCombo.setValue("1");
+//
+//
+//                    // Layout
+//                    GridPane grid = new GridPane();
+//                    grid.setHgap(10);
+//                    grid.setVgap(10);
+//                    grid.addRow(0, new Label("Task:"), taskField);
+//                    grid.addRow(1, new Label("Description:"), description);
+//                    grid.addRow(2, new Label("Duration:"), durationField);
+//                    grid.addRow(3, new Label("CODE:"), taskCode);
+//                    grid.addRow(4, new Label("Semester:"), semCombo);
+//                    grid.addRow(5, new Label("School Year:"), schoolYearCombo);
+//                    grid.addRow(6, new Label("Section:"), sectionCombo);
+//                    grid.addRow(7, new Label("Year Level:"), yearLevelCombo);
+//                    dialog.getDialogPane().setContent(grid);
+//                    dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+//                    Optional<ButtonType> result = dialog.showAndWait();
+//                    
+//                    String section = sectionCombo.getValue();
+//                    String yearLevel = yearLevelCombo.getValue();
+//
+//                    if (section == null || yearLevel == null) {
+//                        showAlert("Section and Year Level are required!");
+//                        return;
+//                    }
+//
+//                    if (result.isPresent() && result.get() == ButtonType.OK) {
+//                        String task = taskField.getText().trim();
+//                        String duration = durationField.getText().trim();
+//                        String task_code = taskCode.getText().trim();
+//                        String descriptions = description.getText().trim();
+//                        String sem = semCombo.getValue();
+//                        String schoolYear = schoolYearCombo.getValue();
+//
+//                        if (task.isEmpty() || duration.isEmpty() || sem == null || schoolYear == null) {
+//                            showAlert("Task, Duration, Semester, and School Year are required!");
+//                            return;
+//                        }
+//
+//                        if (!isValidDuration(duration)) {
+//                            showAlert("Invalid duration! Use whole hours (e.g., 1, 2) or H:MM (e.g., 1:30). Max 24 hours.");
+//                            return;
+//                        }
+//
+//                        try {
+//                            PreparedStatement ps = dc.con.prepareStatement(
+//                                "INSERT INTO tasks (task, status, subject_id, duration, instructor_id, task_code, description, sem, school_year, sec, year) " +
+//                                "VALUES (?, 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+//                            );
+//
+//                            ps.setString(1, task);
+//                            ps.setString(2, selected.getId());
+//                            ps.setString(3, duration);
+//                            ps.setString(4, instructorID);
+//                            ps.setString(5, task_code);
+//                            ps.setString(6, descriptions);
+//                            ps.setString(7, sem);
+//                            ps.setString(8, schoolYear);
+//                            ps.setString(9, section);
+//                            ps.setString(10, yearLevel);
+//
+//
+//                            int rows = ps.executeUpdate();
+//                            if (rows > 0) {
+//                                Alert success = new Alert(Alert.AlertType.INFORMATION);
+//                                success.setTitle("Success");
+//                                success.setHeaderText("Session created successfully!");
+//                                success.showAndWait();
+//                            }
+//
+//                            ps.close();
+//                        } catch (SQLException e) {
+//                            e.printStackTrace();
+//                            Alert error = new Alert(Alert.AlertType.ERROR);
+//                            error.setTitle("Error");
+//                            error.setHeaderText("Failed to create session.");
+//                            error.setContentText(e.getMessage());
+//                            error.showAndWait();
+//                        }
+//                    }
+//                });
+//            }
+//
+//            @Override
+//            protected void updateItem(Void item, boolean empty) {
+//                super.updateItem(item, empty);
+//                setGraphic(empty ? null : createBtn);
+//            }
+//        });
 
-        // Create button (no action)
-        createSession.setCellFactory(col -> new TableCell<>() {
+
+
+        // Manage buttons: Update and Delete
+        manageSubject.setCellFactory(col -> new TableCell<>() {
+            private final Button updateBtn = new Button("Update");
+            private final Button deleteBtn = new Button("Delete");
             private final Button createBtn = new Button("Create");
+            private final HBox hbox = new HBox(5, updateBtn, deleteBtn,createBtn);
 
             {
                 createBtn.setOnAction(event -> {
@@ -343,12 +554,16 @@ public class sessionController {
                     TextArea description = new TextArea();
                     description.setWrapText(true);
 
-                    // ✅ NEW: Semester ComboBox
+                    // ✅ Points Field
+                    TextField pointsField = new TextField();
+                    pointsField.setPromptText("Enter points");
+
+                    // Semester ComboBox
                     ComboBox<String> semCombo = new ComboBox<>();
                     semCombo.getItems().addAll("1", "2");
                     semCombo.setValue("1");
 
-                    // ✅ NEW: School Year ComboBox
+                    // School Year ComboBox
                     ComboBox<String> schoolYearCombo = new ComboBox<>();
                     int currentYear = LocalDate.now().getYear();
                     for (int i = -1; i <= 3; i++) {
@@ -356,6 +571,16 @@ public class sessionController {
                         schoolYearCombo.getItems().add(start + "-" + (start + 1));
                     }
                     schoolYearCombo.setValue(currentYear + "-" + (currentYear + 1));
+
+                    // Section ComboBox
+                    ComboBox<String> sectionCombo = new ComboBox<>();
+                    sectionCombo.getItems().addAll("A", "B", "C", "D");
+                    sectionCombo.setValue("A");
+
+                    // Year Level ComboBox
+                    ComboBox<String> yearLevelCombo = new ComboBox<>();
+                    yearLevelCombo.getItems().addAll("1", "2", "3", "4");
+                    yearLevelCombo.setValue("1");
 
                     // Layout
                     GridPane grid = new GridPane();
@@ -365,12 +590,23 @@ public class sessionController {
                     grid.addRow(1, new Label("Description:"), description);
                     grid.addRow(2, new Label("Duration:"), durationField);
                     grid.addRow(3, new Label("CODE:"), taskCode);
-                    grid.addRow(4, new Label("Semester:"), semCombo);
-                    grid.addRow(5, new Label("School Year:"), schoolYearCombo);
+                    grid.addRow(4, new Label("Points:"), pointsField); // ✅ Added points
+                    grid.addRow(5, new Label("Semester:"), semCombo);
+                    grid.addRow(6, new Label("School Year:"), schoolYearCombo);
+                    grid.addRow(7, new Label("Section:"), sectionCombo);
+                    grid.addRow(8, new Label("Year Level:"), yearLevelCombo);
 
                     dialog.getDialogPane().setContent(grid);
                     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
                     Optional<ButtonType> result = dialog.showAndWait();
+
+                    String section = sectionCombo.getValue();
+                    String yearLevel = yearLevelCombo.getValue();
+
+                    if (section == null || yearLevel == null) {
+                        showAlert("Section and Year Level are required!");
+                        return;
+                    }
 
                     if (result.isPresent() && result.get() == ButtonType.OK) {
                         String task = taskField.getText().trim();
@@ -379,9 +615,18 @@ public class sessionController {
                         String descriptions = description.getText().trim();
                         String sem = semCombo.getValue();
                         String schoolYear = schoolYearCombo.getValue();
+                        String points = pointsField.getText().trim();
 
-                        if (task.isEmpty() || duration.isEmpty() || sem == null || schoolYear == null) {
-                            showAlert("Task, Duration, Semester, and School Year are required!");
+                        if (task.isEmpty() || duration.isEmpty() || sem == null || schoolYear == null || points.isEmpty()) {
+                            showAlert("Task, Duration, Semester, School Year, and Points are required!");
+                            return;
+                        }
+
+                        // Validate numeric points
+                        try {
+                            Integer.parseInt(points);
+                        } catch (NumberFormatException e) {
+                            showAlert("Points must be a valid number!");
                             return;
                         }
 
@@ -392,9 +637,10 @@ public class sessionController {
 
                         try {
                             PreparedStatement ps = dc.con.prepareStatement(
-                                "INSERT INTO tasks (task, status, subject_id, duration, instructor_id, task_code, description, sem, school_year) " +
-                                "VALUES (?, 'Pending', ?, ?, ?, ?, ?, ?, ?)"
+                                "INSERT INTO tasks (task, status, subject_id, duration, instructor_id, task_code, description, sem, school_year, sec, year, points) " +
+                                "VALUES (?, 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                             );
+
                             ps.setString(1, task);
                             ps.setString(2, selected.getId());
                             ps.setString(3, duration);
@@ -403,6 +649,9 @@ public class sessionController {
                             ps.setString(6, descriptions);
                             ps.setString(7, sem);
                             ps.setString(8, schoolYear);
+                            ps.setString(9, section);
+                            ps.setString(10, yearLevel);
+                            ps.setInt(11, Integer.parseInt(points)); // ✅ Bind points
 
                             int rows = ps.executeUpdate();
                             if (rows > 0) {
@@ -423,24 +672,7 @@ public class sessionController {
                         }
                     }
                 });
-            }
 
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : createBtn);
-            }
-        });
-
-
-
-        // Manage buttons: Update and Delete
-        manageSubject.setCellFactory(col -> new TableCell<>() {
-            private final Button updateBtn = new Button("Update");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox hbox = new HBox(5, updateBtn, deleteBtn);
-
-            {
                 updateBtn.setOnAction(event -> {
                     subject selected = getTableView().getItems().get(getIndex());
 
@@ -573,9 +805,9 @@ public class sessionController {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Add Subject Details");
 
-        ComboBox<Integer> semCombo = new ComboBox<>();
-        semCombo.getItems().addAll(1, 2); // Summer is 3
-        semCombo.setValue(1);
+        ComboBox<String> semCombo = new ComboBox<>();
+        semCombo.getItems().addAll("1st", "2nd", "Mid Year"); // Summer is 3
+        semCombo.setValue("1st");
 
         ComboBox<String> yearCombo = new ComboBox<>();
         yearCombo.getItems().addAll(
@@ -597,7 +829,7 @@ public class sessionController {
         Optional<ButtonType> result = dialog.showAndWait();
         if (result.isEmpty() || result.get() != ButtonType.OK) return;
 
-        int sem = semCombo.getValue();
+        String sem = semCombo.getValue();
         String schoolYear = yearCombo.getValue();
 
         try {
@@ -608,7 +840,7 @@ public class sessionController {
             ps.setString(1, code);
             ps.setString(2, description);
             ps.setString(3, instructorID);
-            ps.setInt(4, sem);
+            ps.setString(4, sem);
             ps.setString(5, schoolYear);
 
             int rows = ps.executeUpdate();

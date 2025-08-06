@@ -22,10 +22,12 @@ public class TaskSubjectView {
     private final StringProperty duration;
     private final StringProperty status;
     private final StringProperty dateSub;
+    private final StringProperty points;
 
     public TaskSubjectView(String taskId, String task, String taskDescription,
                            String subjectCode, String subjectDescription,
-                           String duration, String status, String dateSub) {
+                           String duration, String status, String dateSub
+                            , String points) {
         this.taskId = new SimpleStringProperty(taskId);
         this.task = new SimpleStringProperty(task);
         this.taskDescription = new SimpleStringProperty(taskDescription);
@@ -34,6 +36,7 @@ public class TaskSubjectView {
         this.duration = new SimpleStringProperty(duration);
         this.status = new SimpleStringProperty(status);
         this.dateSub = new SimpleStringProperty(dateSub);
+        this.points = new SimpleStringProperty(points);
     }
 
     // Getters
@@ -67,6 +70,10 @@ public class TaskSubjectView {
 
     public String getStatus() {
         return status.get();
+    }
+
+    public String getPoints() {
+        return points.get();
     }
 
     // Setters
@@ -104,6 +111,10 @@ public class TaskSubjectView {
         status.set(value);
     }
 
+    public void setPoints(String value) {
+        points.set(value);
+    }
+
     // Property accessors (for TableView binding)
     
     public StringProperty dateSubProperty() {
@@ -136,6 +147,10 @@ public class TaskSubjectView {
 
     public StringProperty statusProperty() {
         return status;
+    }
+
+    public StringProperty pointsProperty() {
+        return points;
     }
 }
 

@@ -16,15 +16,23 @@ public class viewStudentPerformance {
     private final StringProperty description;
     private final StringProperty task;
     private final StringProperty score;
+    private final StringProperty fileName;
+    private final StringProperty taskId;
 
-    public viewStudentPerformance(String code, String description, String task, String score) {
+    public viewStudentPerformance(String code, String description, String task, String score, String fileName, String taskId) {
         this.code = new SimpleStringProperty(code);
         this.description = new SimpleStringProperty(description);
         this.task = new SimpleStringProperty(task);
         this.score = new SimpleStringProperty(score);
+        this.fileName = new SimpleStringProperty(fileName);
+        this.taskId = new SimpleStringProperty(taskId);
     }
 
     // Getters
+    public String gettaskId() {
+        return taskId.get();
+    }
+    
     public String getcode() {
         return code.get();
     }
@@ -39,6 +47,10 @@ public class viewStudentPerformance {
 
     public String getscore() {
         return score.get();
+    }
+
+    public String getfilename() {
+        return fileName.get();
     }
 
     // Properties
@@ -59,6 +71,10 @@ public class viewStudentPerformance {
         return score;
     }
 
+    public StringProperty fileNameProperty() {
+        return fileName;
+    }
+    
     // Optional: Setters if needed
     public void setcode(String id) {
         this.code.set(id);
@@ -74,6 +90,10 @@ public class viewStudentPerformance {
 
     public void setscore(String message) {
         this.score.set(message);
+    }
+    
+    public void setfilename(String message) {
+        this.fileName.set(message);
     }
 }
 

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
@@ -36,10 +37,9 @@
               <columns>
                 <TableColumn fx:id="subCode" prefWidth="83.20001220703125" text="CODE" />
                 <TableColumn fx:id="subName" prefWidth="245.59994506835938" text="NAME" />
-                  <TableColumn fx:id="createSession" prefWidth="58.39996337890625" text="SESSION" />
-                  <TableColumn fx:id="manageSubject" prefWidth="143.20001220703125" text="MANAGE" />
-                  <TableColumn fx:id="subSem" prefWidth="31.2001953125" text="SEM" />
-                  <TableColumn fx:id="subYear" prefWidth="102.39990234375" text="YEAR" />
+                  <TableColumn fx:id="manageSubject" prefWidth="198.39996337890625" text="MANAGE" />
+                  <TableColumn fx:id="subSem" prefWidth="33.5999755859375" text="SEM" />
+                  <TableColumn fx:id="subYear" prefWidth="106.4000244140625" text="YEAR" />
               </columns>
             </TableView>
             <Text fill="#696161" layoutX="239.0" layoutY="58.0" strokeType="OUTSIDE" strokeWidth="0.0" text="SUBJECTS" wrappingWidth="292.17230224609375">
@@ -48,8 +48,10 @@
                </font>
             </Text>
             <Button layoutX="618.0" layoutY="93.0" mnemonicParsing="false" onAction="#addSubject" text="ADD SUBJECT" />
+            <ComboBox fx:id="semCombo" layoutX="367.0" layoutY="93.0" prefHeight="25.0" prefWidth="83.0" />
+            <ComboBox fx:id="yearCombo" layoutX="456.0" layoutY="93.0" prefWidth="150.0" />
          </children></Pane>
-      <Pane fx:id="taskPane" layoutX="149.0" prefHeight="588.0" prefWidth="781.0" visible="false">
+      <Pane fx:id="taskPane" layoutX="149.0" prefHeight="588.0" prefWidth="781.0">
          <children>
             <Text fill="#696161" layoutX="244.0" layoutY="58.0" strokeType="OUTSIDE" strokeWidth="0.0" text="TASKS" wrappingWidth="292.17230224609375">
                <font>
@@ -58,18 +60,19 @@
             </Text>
             <TableView fx:id="taskTable" layoutX="44.0" layoutY="117.0" prefHeight="433.0" prefWidth="704.0">
               <columns>
-                <TableColumn fx:id="task" prefWidth="75.0" text="Task" />
-                <TableColumn fx:id="taskDesc" prefWidth="151.99993896484375" text="Task Description" />
+                <TableColumn fx:id="task" prefWidth="78.4000244140625" text="Task" />
+                <TableColumn fx:id="taskDesc" prefWidth="148.79998779296875" text="Task Description" />
                   <TableColumn fx:id="subCodeCol" prefWidth="59.199951171875" text="Code" />
-                  <TableColumn fx:id="subDesc" prefWidth="115.99996948242188" text="Subject Description" />
-                  <TableColumn fx:id="dur" prefWidth="54.4000244140625" text="Duration" />
-                  <TableColumn fx:id="dateSub" prefWidth="109.5999755859375" text="Date" />
-                  <TableColumn fx:id="taskActions" prefWidth="133.5999755859375" text="Actions" />
+                  <TableColumn fx:id="subDesc" prefWidth="87.19998168945312" text="Description" />
+                  <TableColumn fx:id="dur" prefWidth="62.4000244140625" text="Duration" />
+                  <TableColumn fx:id="points" prefWidth="55.20001220703125" text="Points" />
+                  <TableColumn fx:id="dateSub" prefWidth="101.5999755859375" text="Date" />
+                  <TableColumn fx:id="taskActions" prefWidth="105.60009765625" text="Actions" />
               </columns>
             </TableView>
          </children>
       </Pane>
-      <Pane fx:id="studentPassPane" layoutX="148.0" prefHeight="588.0" prefWidth="782.0">
+      <Pane fx:id="studentPassPane" layoutX="148.0" prefHeight="588.0" prefWidth="782.0" visible="false">
          <children>
             <TableView fx:id="studentPass" layoutX="79.0" layoutY="117.0" prefHeight="411.0" prefWidth="654.0">
               <columns>

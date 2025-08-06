@@ -23,6 +23,8 @@ import java.time.Period;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
@@ -59,6 +61,8 @@ public class adminController {
         // Fields for student info
         TextField firstname = new TextField();
         TextField lastname = new TextField();
+        TextField middlename = new TextField();
+
         ComboBox<String> gender = new ComboBox<>();
         gender.getItems().addAll("Male", "Female");
         gender.setValue("Male");
@@ -69,20 +73,45 @@ public class adminController {
         TextField contact = new TextField();
         TextField username = new TextField();
         PasswordField password = new PasswordField();
+        TextField ageField = new TextField();
+        ageField.setEditable(false);
+        ComboBox<String> section = new ComboBox<>();
+        section.getItems().addAll("A", "B", "C", "D");
+        section.setValue("A");
+
+        ComboBox<Integer> yearLevel = new ComboBox<>();
+        yearLevel.getItems().addAll(1, 2, 3, 4);
+        yearLevel.setValue(1);
+
+        
+        birthday.valueProperty().addListener((obs, oldDate, newDate) -> {
+            if (newDate != null) {
+                int age = Period.between(newDate, LocalDate.now()).getYears();
+                ageField.setText(String.valueOf(age));
+            } else {
+                ageField.clear();
+            }
+        });
 
         // Layout
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.addRow(0, new Label("First Name:"), firstname);
-        grid.addRow(1, new Label("Last Name:"), lastname);
-        grid.addRow(2, new Label("Gender:"), gender);
-        grid.addRow(3, new Label("Birthday:"), birthday);
-        grid.addRow(4, new Label("Address:"), address);
-        grid.addRow(5, new Label("Email:"), email);
-        grid.addRow(6, new Label("Contact:"), contact);
-        grid.addRow(7, new Label("Username:"), username);
-        grid.addRow(8, new Label("Password:"), password);
+        grid.addRow(1, new Label("Middle Name:"), middlename); // ← New
+        grid.addRow(2, new Label("Last Name:"), lastname);
+        grid.addRow(3, new Label("Gender:"), gender);
+        grid.addRow(4, new Label("Birthday:"), birthday);
+        grid.addRow(5, new Label("Age:"), ageField);
+        grid.addRow(6, new Label("Address:"), address);
+        grid.addRow(7, new Label("Email:"), email);
+        grid.addRow(8, new Label("Contact:"), contact);
+        grid.addRow(9, new Label("Username:"), username);
+        grid.addRow(10, new Label("Password:"), password);
+        grid.addRow(11, new Label("Section:"), section);
+        grid.addRow(12, new Label("Year Level:"), yearLevel);
+
+
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -135,10 +164,10 @@ public class adminController {
 
                 // ✅ Validate password: max 8 chars and at least one uppercase letter
                 String pwd = password.getText().trim();
-                if (pwd.length() > 8 || !pwd.matches(".*[A-Z].*")) {
-                    showAlert("Password must have at least one capital letter and be maximum 8 characters long.");
-                    return;
-                }
+//                if (pwd.length() > 8 || !pwd.matches(".*[A-Z].*")) {
+//                    showAlert("Password must have at least one capital letter and be maximum 8 characters long.");
+//                    return;
+//                }
 
                 // ✅ Calculate age
                 int age = Period.between(birthday.getValue(), LocalDate.now()).getYears();
@@ -146,20 +175,25 @@ public class adminController {
                 try {
                     PreparedStatement insert = dc.con.prepareStatement(
                         "INSERT INTO student " +
-                        "(lastname, firstname, gender, age, birthday, address, email, contact, username, password) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "(lastname, firstname, middlename, gender, age, birthday, address, email, contact, username, password, sec, year) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     );
+
 
                     insert.setString(1, lastname.getText());
                     insert.setString(2, firstname.getText());
-                    insert.setString(3, gender.getValue());
-                    insert.setInt(4, age);
-                    insert.setDate(5, Date.valueOf(birthday.getValue()));
-                    insert.setString(6, address.getText());
-                    insert.setString(7, email.getText());
-                    insert.setString(8, contact.getText());
-                    insert.setString(9, username.getText());
-                    insert.setString(10, pwd);
+                    insert.setString(3, middlename.getText()); // ← New
+                    insert.setString(4, gender.getValue());
+                    insert.setInt(5, age);
+                    insert.setDate(6, Date.valueOf(birthday.getValue()));
+                    insert.setString(7, address.getText());
+                    insert.setString(8, email.getText());
+                    insert.setString(9, contact.getText());
+                    insert.setString(10, username.getText());
+                    insert.setString(11, pwd);
+                    insert.setString(12, section.getValue());        // New
+                    insert.setInt(13, yearLevel.getValue());         // New
+
 
                     int rows = insert.executeUpdate();
                     insert.close();
@@ -197,20 +231,21 @@ public class adminController {
 
 
     @FXML private TableView<StudentView> studentTable;
-    @FXML private TableColumn<StudentView, String> fname, lname, email, user, pass;
+    @FXML private TableColumn<StudentView, String> fullname, email, user, pass, yearSection;
     @FXML private TableColumn<StudentView, Void> actions;
     
     ObservableList<StudentView> studentList = FXCollections.observableArrayList();
     public void loadStudents() throws SQLException {
         studentList.clear();
 
-        fname.setCellValueFactory(data -> data.getValue().firstnameProperty());
-        lname.setCellValueFactory(data -> data.getValue().lastnameProperty());
+        fullname.setCellValueFactory(data -> data.getValue().fullnameProperty());
         email.setCellValueFactory(data -> data.getValue().emailProperty());
         user.setCellValueFactory(data -> data.getValue().usernameProperty());
         pass.setCellValueFactory(data -> data.getValue().passwordProperty());
-        
-        PreparedStatement stmt = dc.con.prepareStatement("SELECT * FROM student");
+        yearSection.setCellValueFactory(data ->
+        new SimpleStringProperty(data.getValue().getYear() + " - " + data.getValue().getSection()));
+
+        PreparedStatement stmt = dc.con.prepareStatement("SELECT * FROM student ORDER BY lastname");
         ResultSet rs = stmt.executeQuery();
 
         while (rs.next()) {
@@ -224,8 +259,12 @@ public class adminController {
                 rs.getString("email"),
                 rs.getString("contact"),
                 rs.getString("username"),
-                rs.getString("password")
+                rs.getString("password"),
+                rs.getString("middlename"),
+                rs.getString("sec"),
+                rs.getString("year")
             ));
+
         }
         actions.setCellFactory(col -> new TableCell<>() {
             private final Button editBtn = new Button("Edit");
@@ -260,6 +299,20 @@ public class adminController {
 
         studentTable.setItems(studentList);
     }
+    @FXML private TextField keyword;
+    @FXML
+    public void searchStudents() {
+        FilteredList<StudentView> filteredData = new FilteredList<>(studentList, student -> {
+            String lowerKeyword = keyword.getText().toLowerCase();
+
+            return student.fullnameProperty().get().toLowerCase().contains(lowerKeyword) ||
+                   student.emailProperty().get().toLowerCase().contains(lowerKeyword) ||
+                   student.usernameProperty().get().toLowerCase().contains(lowerKeyword);
+        });
+
+        studentTable.setItems(filteredData);
+    }
+
     private void showEditDialog(StudentView student) {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Edit Student");
@@ -268,16 +321,11 @@ public class adminController {
         TextField firstname = new TextField(student.getFirstname());
         TextField lastname = new TextField(student.getLastname());
         TextField email = new TextField(student.getEmail());
-        TextField username = new TextField(student.getUsername());
-        PasswordField password = new PasswordField();
-        password.setText(student.getPassword());
 
         VBox content = new VBox(10,
             new Label("First Name:"), firstname,
             new Label("Last Name:"), lastname,
-            new Label("Email:"), email,
-            new Label("Username:"), username,
-            new Label("Password:"), password
+            new Label("Email:"), email
         );
 
         dialog.getDialogPane().setContent(content);
@@ -286,16 +334,14 @@ public class adminController {
         dialog.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 
-                String updateQuery = "UPDATE student SET firstname=?, lastname=?, email=?, username=?, password=? WHERE studentID=?";
+                String updateQuery = "UPDATE student SET firstname=?, lastname=?, email=? WHERE studentID=?";
                 PreparedStatement stmt;
                 try {
                     stmt = dc.con.prepareStatement(updateQuery);
                     stmt.setString(1, firstname.getText());
                     stmt.setString(2, lastname.getText());
                     stmt.setString(3, email.getText());
-                    stmt.setString(4, username.getText());
-                    stmt.setString(5, password.getText());
-                    stmt.setString(6, student.getStudentID());
+                    stmt.setString(4, student.getStudentID());
 
                     stmt.executeUpdate();
                     stmt.close();
@@ -327,7 +373,22 @@ public class adminController {
 
     
     //----------------------- INSTRUCTOR -----------------------//
-    
+    @FXML private TextField facKeyWord;
+    @FXML
+    public void searchFaculty() {
+        FilteredList<FacultyView> filteredData = new FilteredList<>(facultyList, faculty -> {
+            String lowerKeyword = facKeyWord.getText().toLowerCase();
+
+            return faculty.fullnameProperty().get().toLowerCase().contains(lowerKeyword) ||
+                   faculty.emailProperty().get().toLowerCase().contains(lowerKeyword) ||
+                   faculty.usernameProperty().get().toLowerCase().contains(lowerKeyword) ||
+                   faculty.statusProperty().get().toLowerCase().contains(lowerKeyword);
+        });
+
+        facultyTable.setItems(filteredData);
+    }
+
+
     @FXML private TableView<FacultyView> facultyTable;
     @FXML private TableColumn<FacultyView, String> facFullname, facEmail, facPassword, facUsername,status;
     @FXML private TableColumn<FacultyView, Void> facActions;
@@ -539,7 +600,8 @@ public class adminController {
         ObservableList<TaskSubjectView> tasks = FXCollections.observableArrayList();
         try {
             PreparedStatement stmt = dc.con.prepareStatement(
-                "SELECT task_id, task, status, subject_id, duration, instructor_id, task_code, description, sem, school_year, date_sub FROM tasks WHERE subject_id = ?"
+                "SELECT task_id, task, status, subject_id, duration, instructor_id, task_code, description, "
+                        + "sem, school_year, date_sub, points FROM tasks WHERE subject_id = ?"
             );
             stmt.setString(1, subj.getId());
             ResultSet rs = stmt.executeQuery();
@@ -553,7 +615,8 @@ public class adminController {
                     subj.getDescription(),
                     rs.getString("duration"),
                     rs.getString("status"),
-                    rs.getString("date_sub")
+                    rs.getString("date_sub"),
+                    rs.getString("points")
                 );
                 tasks.add(tsv);
             }
@@ -585,14 +648,9 @@ public class adminController {
 
         TextField fullnameField = new TextField(faculty.getFullname());
         TextField emailField = new TextField(faculty.getEmail());
-        TextField usernameField = new TextField(faculty.getUsername());
-        PasswordField passwordField = new PasswordField();
-        passwordField.setText(faculty.getPassword());
 
         grid.addRow(0, new Label("Full Name:"), fullnameField);
         grid.addRow(1, new Label("Email:"), emailField);
-        grid.addRow(2, new Label("Username:"), usernameField);
-        grid.addRow(3, new Label("Password:"), passwordField);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -601,13 +659,11 @@ public class adminController {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 PreparedStatement ps = dc.con.prepareStatement(
-                    "UPDATE faculty SET fullname=?, email=?, username=?, password=? WHERE facultyID=?"
+                    "UPDATE faculty SET fullname=?, email=? WHERE facultyID=?"
                 );
                 ps.setString(1, fullnameField.getText());
                 ps.setString(2, emailField.getText());
-                ps.setString(3, usernameField.getText());
-                ps.setString(4, passwordField.getText());
-                ps.setString(5, faculty.getFacultyID());
+                ps.setString(3, faculty.getFacultyID());
 
                 ps.executeUpdate();
                 ps.close();

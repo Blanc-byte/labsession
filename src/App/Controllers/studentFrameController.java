@@ -14,11 +14,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -53,21 +59,121 @@ public class studentFrameController {
         
     }
     @FXML private TableView<viewStudentPerformance> myTaskTable;
-    @FXML private TableColumn<viewStudentPerformance, String> taskSubCode, taskSubDes, taskTask, taskScore;
+    @FXML private TableColumn<viewStudentPerformance, String> taskSubCode, taskSubDes, taskTask, taskScore, fileName;
+    @FXML private TableColumn<viewStudentPerformance, Void> action;
+
     public void loadMyTaskTable()throws Exception{
         taskSubCode.setCellValueFactory(cellData -> cellData.getValue().codeProperty());
         taskSubDes.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         taskTask.setCellValueFactory(cellData -> cellData.getValue().taskProperty());
         taskScore.setCellValueFactory(cellData -> cellData.getValue().scoreProperty());
+        fileName.setCellValueFactory(cellData -> cellData.getValue().fileNameProperty());
         loadPerformanceData();
         myTaskTable.setItems(taskList);
+        action.setCellFactory(col -> new TableCell<>() {
+        private final Button updateBtn = new Button("Update");
+
+            {
+                updateBtn.setOnAction(event -> {
+                    viewStudentPerformance selected = getTableView().getItems().get(getIndex());
+//                    System.out.println(selected.gettask());
+                    if (selected != null) {
+                        System.out.println("Click");
+                        try {
+                            handleUpdateFile(selected);
+                        } catch (Exception ex) {
+                            Logger.getLogger(studentFrameController.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(updateBtn);
+                }
+            }
+        });
+
     }
+    private void handleUpdateFile(viewStudentPerformance task) throws Exception{
+        String sql = "SELECT * FROM tasks WHERE status != 'Pending' AND task_id = '"+task.gettaskId()+"'";
+        PreparedStatement ps = dc.con.prepareStatement(sql);
+        ResultSet rss = ps.executeQuery();
+        boolean True=true;
+        while (rss.next()) {
+            True=false;
+        }
+        if(True){
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Choose New File");
+            File newFile = fileChooser.showOpenDialog(myTaskTable.getScene().getWindow());
+
+            if (newFile == null) return; // User canceled
+
+            try (FileInputStream fis = new FileInputStream(newFile)) {
+
+                // Get the task_id first (assuming code & task are unique per student)
+                String getIdSQL = """
+                    SELECT task_id FROM tasks t
+                    JOIN subject s ON t.subject_id = s.id
+                    WHERE s.code = ? AND t.task = ?
+                """;
+                PreparedStatement ps1 = dc.con.prepareStatement(getIdSQL);
+                ps1.setString(1, task.getcode());
+                ps1.setString(2, task.gettask());
+                ResultSet rs = ps1.executeQuery();
+
+                if (rs.next()) {
+                    int taskId = rs.getInt("task_id");
+
+                    String updateSQL = """
+                        UPDATE performance
+                        SET file = ?, file_path = ?, date_sub = NOW()
+                        WHERE student_id = ? AND task_id = ?
+                    """;
+                    PreparedStatement ps2 = dc.con.prepareStatement(updateSQL);
+                    ps2.setBlob(1, fis);
+                    ps2.setString(2, newFile.getName());
+                    ps2.setString(3, studentId);
+                    ps2.setInt(4, taskId);
+
+                    int rowsUpdated = ps2.executeUpdate();
+                    if (rowsUpdated > 0) {
+                        showAlert(Alert.AlertType.INFORMATION, "Success", "File updated successfully!");
+                        loadPerformanceData(); // refresh table
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Error", "Update failed.");
+                    }
+
+                    ps2.close();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Error", "Task not found for update.");
+                }
+
+                rs.close();
+                ps1.close();
+
+            } catch (IOException | SQLException e) {
+                e.printStackTrace();
+                showAlert(Alert.AlertType.ERROR, "Error", "Error updating file: " + e.getMessage());
+            }
+        }else{
+            showAlert(Alert.AlertType.INFORMATION, "Failed", "Task Closed.");
+        }
+        
+    }
+
     ObservableList<viewStudentPerformance> taskList = FXCollections.observableArrayList();
     public void loadPerformanceData() throws SQLException {
         taskList.clear();
 
         String sql = """
-            SELECT s.code, s.description, t.task, p.score
+            SELECT s.code, s.description, t.task, p.score, p.file_path, t.task_id
             FROM tasks t 
             JOIN subject s ON t.subject_id = s.id
             JOIN performance p ON p.task_id = t.task_id
@@ -81,7 +187,9 @@ public class studentFrameController {
                 rs.getString("code"),
                 rs.getString("description"),
                 rs.getString("task"),
-                rs.getString("score")
+                rs.getString("score"),
+                rs.getString("file_path"),
+                rs.getString("task_id")
             ));
             System.out.println(rs.getString("code"));
         }
@@ -110,6 +218,11 @@ public class studentFrameController {
         if (selectedFile == null) {
             showAlert(Alert.AlertType.WARNING, "No File", "Please upload a file first.");
             return;
+        }
+        // Show preview/confirmation before upload
+        boolean confirmed = showFileConfirmation(selectedFile);
+        if (!confirmed) {
+            return; // user cancelled
         }
 
         try (FileInputStream fis = new FileInputStream(selectedFile)) {
@@ -143,10 +256,45 @@ public class studentFrameController {
                 showAlert(Alert.AlertType.ERROR, "Error", "Submission failed.");
             }
 
-        } catch (IOException | SQLException e) {
+        } catch (IOException e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error", "Error uploading file.");
+            showAlert(Alert.AlertType.ERROR, "Error", "File error: " + e.getMessage());
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "SQL error: " + e.getMessage());
         }
+
+    }
+    private boolean showFileConfirmation(File file) {
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Confirm File Upload");
+        confirmAlert.setHeaderText("Please confirm your file before submission");
+
+        // Optional preview for small text files
+        String previewText = "";
+        if (file.getName().toLowerCase().endsWith(".txt") ||
+            file.getName().toLowerCase().endsWith(".java") ||
+            file.getName().toLowerCase().endsWith(".csv")) {
+            try {
+                previewText = new String(java.nio.file.Files.readAllBytes(file.toPath()));
+                if (previewText.length() > 500) { // limit preview size
+                    previewText = previewText.substring(0, 500) + "\n... (truncated)";
+                }
+            } catch (IOException e) {
+                previewText = "(Unable to read file content)";
+            }
+        } else {
+            previewText = "(Preview not available for this file type)";
+        }
+
+        confirmAlert.setContentText("File Name: " + file.getName() +
+                "\nSize: " + file.length() + " bytes\n\nPreview:\n" + previewText);
+
+        ButtonType yesBtn = new ButtonType("Confirm", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        confirmAlert.getButtonTypes().setAll(yesBtn, cancelBtn);
+
+        return confirmAlert.showAndWait().filter(response -> response == yesBtn).isPresent();
     }
 
     private Timeline countdown;
@@ -154,78 +302,103 @@ public class studentFrameController {
 
     @FXML private TextArea message;
     @FXML private Label task, description, duration, filePath;
-    public void validateTaskCode() throws Exception{
+    public void validateTaskCode() throws Exception {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Validate Task Code");
         dialog.setHeaderText("Enter Task Code");
         dialog.setContentText("Task Code:");
 
+        // Clear any previous session info
         task.setText("");
         description.setText("");
         duration.setText("");
         filePath.setText("");
-        duration.setText("");
-        
+
         dialog.showAndWait().ifPresent(inputCode -> {
-            if (inputCode.trim().isEmpty()) {
+            String code = inputCode.trim();
+            if (code.isEmpty()) {
                 showAlert(Alert.AlertType.WARNING, "Empty Input", "Please enter a valid task code.");
                 return;
             }
 
-            try {
-                PreparedStatement ps = dc.con.prepareStatement("SELECT * FROM tasks WHERE status = 'Pending' AND task_code = ?");
-                ps.setString(1, inputCode.trim());
-                taskCode=inputCode.trim();
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    ifOnSession=true;
-                    taskID=rs.getString("task_id");
-                    
-                    // 2️⃣ Check in performance table if this student already submitted for this task
-                    PreparedStatement checkPerformance = dc.con.prepareStatement(
-                        "SELECT * FROM performance WHERE student_id = ? AND task_id = ?"
-                    );
-                    checkPerformance.setString(1, studentId);  // your logged-in student ID
-                    checkPerformance.setString(2, taskID);
-
-                    ResultSet rsCheck = checkPerformance.executeQuery();
-                    if (rsCheck.next()) {
-                        // 🚫 Student already submitted this task
-                        showAlert(Alert.AlertType.WARNING, "Already Submitted",
-                            "You have already submitted this task. You cannot do it again.");
-                        rsCheck.close();
-                        checkPerformance.close();
-                        rs.close();
-                        ps.close();
-                        return; // stop here
+            try (
+                PreparedStatement ps = dc.con.prepareStatement(
+                    "SELECT * FROM tasks WHERE status = 'Pending' AND task_code = ?"
+                )
+            ) {
+                ps.setString(1, code);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        showAlert(Alert.AlertType.ERROR, "Not Found", "Task code does not exist.");
+                        return;
                     }
-                    rsCheck.close();
-                    checkPerformance.close();
 
-                    
-                    
+                    // 1️⃣ Read task's section & year
+                    String taskSec  = rs.getString("sec");
+                    String taskYear = rs.getString("year");
+                    String taskId   = rs.getString("task_id");
+                    taskID=taskId;
+                    // 2️⃣ Fetch this student's sec & year
+                    String studentSec, studentYear;
+                    try (
+                        PreparedStatement ps2 = dc.con.prepareStatement(
+                            "SELECT sec, year FROM student WHERE studentID = ?"
+                        )
+                    ) {
+                        ps2.setString(1, studentId);
+                        try (ResultSet rs2 = ps2.executeQuery()) {
+                            if (!rs2.next()) {
+                                showAlert(Alert.AlertType.ERROR, "Error", "Cannot find your student record.");
+                                return;
+                            }
+                            studentSec  = rs2.getString("sec");
+                            studentYear = rs2.getString("year");
+                        }
+                    }
+
+                    // 3️⃣ Validate match
+                    if (!taskSec.equals(studentSec) || !taskYear.equals(studentYear)) {
+                        showAlert(Alert.AlertType.WARNING,
+                                  "Access Denied",
+                                  "This task can`t be access!");
+                        return;
+                    }
+
+                    // 4️⃣ Check previous submission
+                    try (
+                        PreparedStatement checkPerf = dc.con.prepareStatement(
+                            "SELECT 1 FROM performance WHERE student_id = ? AND task_id = ?"
+                        )
+                    ) {
+                        checkPerf.setString(1, studentId);
+                        checkPerf.setString(2, taskId);
+                        try (ResultSet rsCheck = checkPerf.executeQuery()) {
+                            if (rsCheck.next()) {
+                                showAlert(Alert.AlertType.WARNING,
+                                          "Already Submitted",
+                                          "You have already submitted this task.");
+                                return;
+                            }
+                        }
+                    }
+
+                    // 5️⃣ All good—open session
                     homePane.setVisible(false);
                     sessionPane.setVisible(true);
-                    
-                    task.setText(task.getText()+rs.getString("task"));
-                    description.setText(description.getText()+rs.getString("description"));
+                    task.setText(rs.getString("task"));
+                    description.setText(rs.getString("description"));
                     String rawDuration = rs.getString("duration");
-                    duration.setText(duration.getText()+rawDuration); // Initial display
-                    
+                    duration.setText(rawDuration);
                     startCountdown(rawDuration);
-//                    showAlert(Alert.AlertType.INFORMATION, "Success", "Task code is valid and exists in the database.");
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Not Found", "Task code does not exist.");
                 }
 
-                rs.close();
-                ps.close();
             } catch (SQLException e) {
                 e.printStackTrace();
-                showAlert(Alert.AlertType.ERROR, "Error", "Database error occurred.");
+                showAlert(Alert.AlertType.ERROR, "Error", "Database error occurred:\n" + e.getMessage());
             }
         });
     }
+
     private void startCountdown(String durationStr) {
         // Stop previous timer if running
         if (countdown != null) {

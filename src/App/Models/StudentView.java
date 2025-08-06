@@ -23,9 +23,14 @@ public class StudentView {
     private final StringProperty contact;
     private final StringProperty username;
     private final StringProperty password;
+    private final StringProperty middlename;
+    private final StringProperty section;
+    private final StringProperty year;
+
 
     public StudentView(String studentID, String lastname, String firstname, String gender, String age,
-                       String address, String email, String contact, String username, String password) {
+                   String address, String email, String contact, String username, String password,
+                   String middlename, String section, String year) {
         this.studentID = new SimpleStringProperty(studentID);
         this.lastname = new SimpleStringProperty(lastname);
         this.firstname = new SimpleStringProperty(firstname);
@@ -36,8 +41,45 @@ public class StudentView {
         this.contact = new SimpleStringProperty(contact);
         this.username = new SimpleStringProperty(username);
         this.password = new SimpleStringProperty(password);
+        this.middlename = new SimpleStringProperty(middlename);
+        this.section = new SimpleStringProperty(section);
+        this.year = new SimpleStringProperty(year);
+    }
+    public String getSection() { return section.get(); }
+    public void setSection(String value) { section.set(value); }
+    public StringProperty sectionProperty() { return section; }
+
+    public String getYear() { return year.get(); }
+    public void setYear(String value) { year.set(value); }
+    public StringProperty yearProperty() { return year; }
+
+    public StringProperty yearAndSectionProperty() {
+        return new SimpleStringProperty(year.get() + " - " + section.get());
     }
 
+    
+    public StringProperty fullnameProperty() {
+        String middle = middlename.get();
+        if (middle == null || middle.trim().isEmpty()) {
+            middle = "";
+        } else {
+            middle = " " + middle;
+        }
+        return new SimpleStringProperty(lastname.get() + ", " + firstname.get() + middle);
+    }
+
+    public String getMiddlename() {
+        return middlename.get();
+    }
+
+    public void setMiddlename(String value) {
+        middlename.set(value);
+    }
+
+    public StringProperty middlenameProperty() {
+        return middlename;
+    }
+    
     public String getStudentID() {
         return studentID.get();
     }

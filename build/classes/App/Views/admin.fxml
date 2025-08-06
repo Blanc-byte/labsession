@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
@@ -28,7 +30,7 @@
             <Font name="System Bold" size="12.0" />
          </font>
       </Button>
-      <Pane fx:id="facultyPane" layoutX="148.0" prefHeight="586.0" prefWidth="781.0">
+      <Pane fx:id="facultyPane" layoutX="148.0" prefHeight="586.0" prefWidth="781.0" visible="false">
          <children>
             <TableView fx:id="facultyTable" layoutX="8.0" layoutY="108.0" prefHeight="396.0" prefWidth="766.0">
               <columns>
@@ -41,21 +43,33 @@
               </columns>
             </TableView>
             <Button layoutX="638.0" layoutY="75.0" mnemonicParsing="false" onAction="#showAddFacultyDialog" prefHeight="25.0" prefWidth="130.0" text="ADD" />
+            <TextField fx:id="facKeyWord" layoutX="8.0" layoutY="75.0" onKeyReleased="#searchFaculty" prefHeight="25.0" prefWidth="339.0" promptText="Search" />
+            <Label layoutX="257.0" layoutY="14.0" text="LIST OF FACULTIES">
+               <font>
+                  <Font name="Bauhaus 93" size="32.0" />
+               </font>
+            </Label>
          </children>
       </Pane>
-      <Pane fx:id="studentPane" layoutX="148.0" prefHeight="586.0" prefWidth="782.0" visible="false">
+      <Pane fx:id="studentPane" layoutX="148.0" prefHeight="586.0" prefWidth="782.0">
          <children>
             <TableView fx:id="studentTable" layoutX="14.0" layoutY="117.0" prefHeight="458.0" prefWidth="756.0">
               <columns>
-                <TableColumn fx:id="fname" prefWidth="109.60003662109375" text="Firsname" />
-                <TableColumn fx:id="lname" prefWidth="99.20001220703125" text="Lastname" />
+                <TableColumn fx:id="fullname" prefWidth="109.60003662109375" text="Fullname" />
                   <TableColumn fx:id="email" prefWidth="148.79995727539062" text="Email" />
                   <TableColumn fx:id="user" prefWidth="126.4000244140625" text="Username" />
                   <TableColumn fx:id="pass" prefWidth="138.4000244140625" text="Password" />
-                  <TableColumn fx:id="actions" prefWidth="124.800048828125" text="Actions" />
+                  <TableColumn fx:id="yearSection" prefWidth="100.79998779296875" text="Year&amp;Section" />
+                  <TableColumn fx:id="actions" prefWidth="126.4000244140625" text="Actions" />
               </columns>
             </TableView>
             <Button layoutX="639.0" layoutY="80.0" mnemonicParsing="false" onAction="#handleAddStudent" prefHeight="25.0" prefWidth="130.0" text="ADD" />
+            <TextField fx:id="keyword" layoutX="14.0" layoutY="80.0" onKeyReleased="#searchStudents" prefHeight="25.0" prefWidth="387.0" promptText="Search" />
+            <Label layoutX="266.0" layoutY="14.0" text="LIST OF STUDENTS">
+               <font>
+                  <Font name="Bauhaus 93" size="32.0" />
+               </font>
+            </Label>
          </children>
       </Pane>
    </children>
